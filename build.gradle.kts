@@ -70,8 +70,7 @@ subprojects {
     dependencies {
         val implementation by configurations
         val cloudstream by configurations
-        cloudstream("com.lagradost:cloudstream3:master-SNAPSHOT")        // Other dependencies
-        implementation(kotlin("stdlib"))
+        cloudstream("com.lagradost:cloudstream3:pre-release")        implementation(kotlin("stdlib"))
         implementation("com.github.Blatzar:NiceHttp:0.4.13")
         implementation("org.jsoup:jsoup:1.19.1")
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")

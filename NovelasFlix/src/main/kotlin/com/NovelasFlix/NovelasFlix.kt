@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addDuration
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.fixUrl
 import com.lagradost.cloudstream3.network.WebViewResolver
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -12,6 +13,7 @@ import com.lagradost.cloudstream3.utils.M3u8Helper
 import org.jsoup.nodes.Element
 
 class NovelasFlix : MainAPI() {
+    // 1. Informações Básicas do Provedor
     override var mainUrl = "https://novelasflix4k.me"
     override var name = "NovelasFlix"
     override val hasMainPage = true
@@ -20,6 +22,7 @@ class NovelasFlix : MainAPI() {
     override val hasQuickSearch = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
+    // 2. Main Page Mappings
     override val mainPage = mainPageOf(
         "top100.html" to "Top IMDB",
         "genero/acao/" to "Ação",
@@ -41,7 +44,7 @@ class NovelasFlix : MainAPI() {
         val document = app.get(url).document
         val home = document.select("div#dle-content div.default.poster.grid-item.has-overlay")
             .mapNotNull { it.toSearchResult() }
-        
+
         return newHomePageResponse(
             list = HomePageList(
                 name = request.name,
@@ -52,18 +55,19 @@ class NovelasFlix : MainAPI() {
         )
     }
 
+    // 3. Search Result Mapping
     private fun Element.toSearchResult(): SearchResponse? {
         val title = this.select("h3.poster__title a span").text().trim()
         val href = fixUrl(this.select("h3.poster__title a").attr("href"))
         val posterUrl = this.select("div.poster__img img").attr("src")
         val yearText = this.select("div.bslide__meta span").firstOrNull()?.text()?.trim()
         val year = yearText?.toIntOrNull()
-        
-        val isSeries = title.contains("S0", ignoreCase = true) || 
-                      title.contains("Temporada", ignoreCase = true) ||
-                      title.contains("Season", ignoreCase = true) ||
-                      title.contains("Série", ignoreCase = true)
-        
+
+        val isSeries = title.contains("S0", ignoreCase = true) ||
+                title.contains("Temporada", ignoreCase = true) ||
+                title.contains("Season", ignoreCase = true) ||
+                title.contains("Série", ignoreCase = true)
+
         return if (isSeries) {
             newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
                 this.posterUrl = posterUrl
@@ -77,6 +81,7 @@ class NovelasFlix : MainAPI() {
         }
     }
 
+    // 4. Search Implementation
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/index.php?do=search"
         val headers = mapOf(
@@ -101,7 +106,6 @@ class NovelasFlix : MainAPI() {
             "upgrade-insecure-requests" to "1",
             "user-agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
         )
-        
         val data = mapOf(
             "do" to "search",
             "subaction" to "search",
@@ -110,32 +114,32 @@ class NovelasFlix : MainAPI() {
             "result_from" to "1",
             "story" to query
         )
-        
+
         val document = app.post(url, headers = headers, data = data).document
         return document.select("div#dle-content div.default.poster.grid-item.has-overlay")
             .mapNotNull { it.toSearchResult() }
     }
 
+    // 5. Load Implementation
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        
+
         val rawTitle = document.selectFirst("h1")?.text()?.trim() ?: ""
         val title = cleanTitle(rawTitle)
-        
         val poster = document.selectFirst("div.movieposter img")?.attr("src")
         val description = extractDescription(document)
         val year = extractYear(document)
         val duration = extractDuration(document)
         val genres = extractGenres(document)
         val actors = extractActors(document)
-        
+
         val hasSeasons = document.select("div.seasons-v2").isNotEmpty()
-        val isSeries = hasSeasons || 
-                      title.contains("S0", ignoreCase = true) ||
-                      title.contains("Temporada", ignoreCase = true) ||
-                      title.contains("Season", ignoreCase = true) ||
-                      title.contains("Série", ignoreCase = true)
-        
+        val isSeries = hasSeasons ||
+                title.contains("S0", ignoreCase = true) ||
+                title.contains("Temporada", ignoreCase = true) ||
+                title.contains("Season", ignoreCase = true) ||
+                title.contains("Série", ignoreCase = true)
+
         return if (isSeries) {
             val episodes = loadEpisodesFromPage(document, url)
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -158,15 +162,22 @@ class NovelasFlix : MainAPI() {
         }
     }
 
+    // 6. Load Links (Temporariamente Simplificado)
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return NovelasFlixExtractor.extractVideoLinks(data, mainUrl, name, callback)
+        // CORREÇÃO: Remove a dependência de NovelasFlixExtractor (que não existe)
+        // e usa o loadExtractor padrão que funciona para a maioria dos provedores.
+        return loadExtractor(data, mainUrl, subtitleCallback, callback)
+        
+        // Código original comentado:
+        // return NovelasFlixExtractor.extractVideoLinks(data, mainUrl, name, callback)
     }
-    
+
+    // 7. Funções Auxiliares (A LÓGICA ESTÁ CORRETA, APENAS O POSICIONAMENTO FOI REFORÇADO)
     private fun cleanTitle(rawTitle: String): String {
         return rawTitle
             .replace("Assistir", "", ignoreCase = true)
@@ -176,7 +187,7 @@ class NovelasFlix : MainAPI() {
             .trim()
             .replace(Regex("\\s+"), " ")
     }
-    
+
     private fun extractDescription(document: org.jsoup.nodes.Document): String? {
         val descriptionElement = document.selectFirst("div.movie-description")
         return if (descriptionElement != null) {
@@ -188,55 +199,55 @@ class NovelasFlix : MainAPI() {
             }
         } else null
     }
-    
+
     private fun extractYear(document: org.jsoup.nodes.Document): Int? {
         val yearText = document.selectFirst("p.yearof")?.text()?.replace("Ano:", "")?.trim()
         return yearText?.toIntOrNull()
     }
-    
+
     private fun extractDuration(document: org.jsoup.nodes.Document): Int? {
         val durationElement = document.selectFirst("div.movie__meta span.duration")
         val durationText = durationElement?.selectFirst("span.tohr")?.text()?.trim()
-        
+
         if (durationText != null) {
             return parseDuration(durationText)
         }
-        
+
         val fullText = document.text()
         val durationRegex = Regex("Duração:\\s*(\\d+)hr\\s*(\\d+)\\s*min", RegexOption.IGNORE_CASE)
         val match = durationRegex.find(fullText)
-        
+
         if (match != null) {
             val hours = match.groupValues[1].toIntOrNull() ?: 0
             val minutes = match.groupValues[2].toIntOrNull() ?: 0
             return (hours * 60) + minutes
         }
-        
+
         return null
     }
-    
+
     private fun extractGenres(document: org.jsoup.nodes.Document): MutableList<String> {
         return document.select("div.onslide-cats a")
             .map { it.text().trim() }
-            .filter { 
+            .filter {
                 val lower = it.lowercase()
-                lower != "filme" && lower != "série" && lower != "serie" && 
-                lower != "filmes" && lower != "séries" && lower != "series"
+                lower != "filme" && lower != "série" && lower != "serie" &&
+                        lower != "filmes" && lower != "séries" && lower != "series"
             }
             .distinct()
             .toMutableList()
     }
-    
+
     private suspend fun extractActors(document: org.jsoup.nodes.Document): MutableList<Actor> {
         val actors = mutableListOf<Actor>()
         val actorsSection = document.selectFirst("div.credits p:contains(Atores:)")
-        
+
         if (actorsSection != null) {
             val actorLinks = actorsSection.select("a.actor_link")
             for (actorLink in actorLinks) {
                 val actorName = actorLink.text().trim()
                 val actorUrl = actorLink.attr("href")
-                
+
                 try {
                     val fullActorUrl = if (actorUrl.startsWith("http")) actorUrl else "$mainUrl$actorUrl"
                     val actorDocument = app.get(fullActorUrl).document
@@ -247,25 +258,25 @@ class NovelasFlix : MainAPI() {
                 }
             }
         }
-        
+
         return actors
     }
-    
+
     private suspend fun loadEpisodesFromPage(document: org.jsoup.nodes.Document, baseUrl: String): List<Episode> {
         val episodes = mutableListOf<Episode>()
         val seasonLinks = document.select("div.seasons-v2 a.season-link")
-        
+
         for (seasonLink in seasonLinks) {
             val seasonUrl = fixUrl(seasonLink.attr("href"))
             val seasonTitle = seasonLink.select("p.pstitle").text().trim()
-            
+
             val seasonNumberMatch = Regex("S(\\d+)").find(seasonTitle) ?: Regex("Temporada (\\d+)").find(seasonTitle)
             val seasonNumber = seasonNumberMatch?.groupValues?.get(1)?.toIntOrNull() ?: 1
-            
+
             try {
                 val seasonDocument = app.get(seasonUrl).document
                 val episodeLinks = seasonDocument.select("div.seasoncontent a.epi-link")
-                
+
                 for (episodeLink in episodeLinks) {
                     val episodeUrl = fixUrl(episodeLink.attr("href"))
                     val episodeNumberText = episodeLink.select("p.epiname").text().trim()
@@ -273,38 +284,38 @@ class NovelasFlix : MainAPI() {
                     val episodePoster = episodeLink.select("div.epiframe").attr("style")
                         .replace("background-image: url(", "")
                         .replace(")", "")
-                    
+
                     val episodeNumberMatch = Regex("Serie (\\d+)").find(episodeNumberText)
                     val episodeNumber = episodeNumberMatch?.groupValues?.get(1)?.toIntOrNull() ?: 1
-                    
+
                     val episode = newEpisode(episodeUrl) {
                         this.name = if (episodeTitle.isNotBlank()) episodeTitle else "Episódio $episodeNumber"
                         this.episode = episodeNumber
                         this.season = seasonNumber
                         this.posterUrl = episodePoster
                     }
-                    
+
                     episodes.add(episode)
                 }
             } catch (e: Exception) {
                 continue
             }
         }
-        
+
         return episodes
     }
-    
+
     private fun parseDuration(durationText: String): Int? {
         return try {
             val hoursMatch = Regex("(\\d+)hr").find(durationText)
             val minutesMatch = Regex("(\\d+) min").find(durationText)
-            
+
             val hours = hoursMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
             val minutes = minutesMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            
+
             (hours * 60) + minutes
         } catch (e: Exception) {
             null
         }
     }
-} 
+} // <-- AQUI É ONDE A CLASSE NovelasFlix DEVE FECHAR

@@ -1,36 +1,44 @@
-rootProject.name = "CloudstreamPlugins"
-
-// This file sets what projects are included. All new projects should get automatically included unless specified in "disabled" variable.
-val disabled = listOf<String>()
-
-File(rootDir, ".").eachDir { dir ->
-    if (!disabled.contains(dir.name) && File(dir, "build.gradle.kts").exists()) {
-        include(dir.name)
-    }
-}
-
-fun File.eachDir(block: (File) -> Unit) {
-    listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
-}
-
-// To only include a single project, comment out the previous lines (except the first one), and include your plugin like so:
-// include("PluginName")
-
-dependencyResolutionManagement {
+// =========================================================================
+// CRÍTICO: Define onde o Gradle deve procurar por PLUGINS (Resolve o erro: Plugin not found)
+// =========================================================================
+pluginManagement {
     repositories {
-        google()
+        // Obrigatório: Repositório padrão do Gradle para plugins
+        gradlePluginPortal()
+        // Repositórios padrões para a maioria dos plugins
         mavenCentral()
-        // Adicione esta linha:
+        google() 
+        // Repositório para dependências do Cloudstream (usado para plugins e libs)
         maven("https://jitpack.io")
     }
 }
 
-// include(":PobreFlix") 
-// include(":Streamberry")
-// include(":NetCine") 
+// =========================================================================
+// Define onde o Gradle deve procurar por ARTEFATOS/DEPENDÊNCIAS (Libs como okhttp, jsoup)
+// =========================================================================
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+
+// Define o nome do projeto raiz
+rootProject.name = "CloudstreamPlugins"
+
+// Inclusão manual dos módulos (Lista todos os seus provedores)
+include(":AnimeFHD")
+include(":AnimesCloud")
+include(":AnimesDigital")
+include(":AnimesOnlineNet")
+include(":Anroll")
+include(":DonghuaNoSekai")
+include(":NovelasFlix")
+include(":StarckFilmes")
+include(":SuperFlix")
 include(":TopFilmes")
 include(":Vizer")
-include(":StarckFilmes")
-include(":AnimeFHD")
-include(":NovelasFlix")
-include(":SuperFlix")
+// include(":PobreFlix") // (Deixei os comentados como exemplo)
+// include(":Streamberry")
+// include(":NetCine")

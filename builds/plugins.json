@@ -15,9 +15,9 @@
         ],
         "version": 1,
         "internalName": "AnimeFHD",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/D.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/HD.jar",
         "description": "AnimeFHD - Animes em Portugu\u00eas",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/D.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/HD.cs3",
         "name": "AnimeFHD"
     },
     {
@@ -37,9 +37,9 @@
         ],
         "version": 1,
         "internalName": "AnimesCloud",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/d.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ud.jar",
         "description": "AnimesCloud - Animes em FHD e HD",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/d.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ud.cs3",
         "name": "AnimesCloud"
     },
     {
@@ -60,9 +60,9 @@
         ],
         "version": 2,
         "internalName": "AnimesDigital",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/l.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/al.jar",
         "description": "Animes Digital - Animes em FHD LEG e DUB.",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/l.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/al.cs3",
         "name": "AnimesDigital"
     },
     {
@@ -82,9 +82,9 @@
         ],
         "version": 1,
         "internalName": "AnimesOnlineNet",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/t.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/et.jar",
         "description": "AnimesOnlineNet - Animes",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/t.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/et.cs3",
         "name": "AnimesOnlineNet"
     },
     {
@@ -106,9 +106,9 @@
         ],
         "version": 1,
         "internalName": "Anroll",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/l.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ll.jar",
         "description": "Anroll - Animes em HD",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/l.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ll.cs3",
         "name": "Anroll"
     },
     {
@@ -128,9 +128,9 @@
         ],
         "version": 1,
         "internalName": "DonghuaNoSekai",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/i.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ai.jar",
         "description": "DonghuaNoSekai - Donghuas em FHD",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/i.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ai.cs3",
         "name": "DonghuaNoSekai"
     },
     {
@@ -151,9 +151,9 @@
         ],
         "version": 1,
         "internalName": "StarckFilmes",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/s.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/es.jar",
         "description": "StarckFilmes - Filmes em Torrent",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/s.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/es.cs3",
         "name": "StarckFilmes"
     },
     {
@@ -173,7 +173,7 @@
         "version": 1,
         "internalName": "SuperFlix",
         "description": "SuperFlix - Filmes e S\u00e9ries em Portugu\u00eas",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/x.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ix.cs3",
         "name": "SuperFlix"
     },
     {
@@ -192,8 +192,8 @@
         ],
         "version": 1,
         "internalName": "TopFilmes",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/s.jar",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/s.cs3",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/es.jar",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/es.cs3",
         "name": "TopFilmes"
     },
     {
@@ -213,9 +213,9 @@
         ],
         "version": 1,
         "internalName": "UltraCine",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/e.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ne.jar",
         "description": "UltraCine - Filmes e S\u00e9ries",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/e.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/ne.cs3",
         "name": "UltraCine"
     },
     {
@@ -235,9 +235,9 @@
         ],
         "version": 1,
         "internalName": "Vizer",
-        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/r.jar",
+        "jarUrl": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/er.jar",
         "description": "Vizer - Filmes, S\u00e9ries, Animes",
-        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/r.cs3",
+        "url": "https://github.com/euluan1912/cloudstream-brazil-providers/raw/refs/heads/main/builds/er.cs3",
         "name": "Vizer"
     }
 ]

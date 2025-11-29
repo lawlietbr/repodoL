@@ -28,11 +28,17 @@ jobs:
       - name: Generate repository.json
         run: ./gradlew makePluginsJson
 
+      - name: List files (debug – opcional, pode apagar depois)
+        run: |
+          echo "=== RAIZ DO PROJETO ==="
+          ls -la repo.json || true
+          echo "=== LIBS DOS PROVIDERS ==="
+          find . -name "*.cs3" -path "*/build/libs/*"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: CloudstreamProviders
+          name: euluan-repo
           path: |
-            build/repo/repo.json
-            **/build/outputs/apk/release/*.cs3
-            **/build/libs/*.jar
+            repo.json
+            **/build/libs/*.cs3

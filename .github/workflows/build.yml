@@ -9,11 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # ESSENCIAL: Concede permissão de escrita ao GITHUB_TOKEN para o deploy
+      
     steps:
       # 1. CHECKOUT CORRIGIDO: Esta seção garante a permissão de escrita
       - uses: actions/checkout@v4
         with:
-          # ESSA LINHA É CRÍTICA: Dá permissão à Action para escrever no branch gh-pages
+          # ESSA LINHA É CRÍTICA: Passa o token para a ação de checkout
           token: ${{ secrets.GITHUB_TOKEN }} 
 
       # 2. SETUP JAVA/GRADLE

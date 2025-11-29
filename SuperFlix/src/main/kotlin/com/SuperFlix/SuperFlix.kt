@@ -8,7 +8,7 @@ class SuperFlixProvider : MainAPI() {
     override val mainUrl = "https://superflix.com.br"
     override val name = "SuperFlix"
     override val hasMainPage = true
-    override val lang = listOf("pt", "pt-br") // lista de idiomas
+    override val lang = listOf("pt") // ou listOf("pt","pt-br")
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
@@ -134,7 +134,7 @@ class SuperFlixProvider : MainAPI() {
                         url = videoUrl,
                         referer = mainUrl,
                         quality = Qualities.P1080.value,
-                        type = ExtractorLinkType.M3U8 // explícito
+                        type = ExtractorLinkType.M3U8 // obrigatório para m3u8
                     )
                 )
             }

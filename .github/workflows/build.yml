@@ -3,14 +3,14 @@ name: Build Cloudstream Providers
 on:
   push:
     branches:
-      - main # Roda no push para o branch principal
-  workflow_dispatch: # Permite rodar manualmente
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # ESSENCIAL: Permite que o bot faça commit no branch main
+      contents: write # 1. CRÍTICO: Permissão de escrita para o deploy
       
     steps:
       - uses: actions/checkout@v4
@@ -34,31 +34,35 @@ jobs:
       - name: Generate repository.json at correct path
         run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
 
-      # 4. CRIAÇÃO DA ESTRUTURA FINAL (COPIAR OS ARQUIVOS)
+      # 4. CRIAÇÃO DA ESTRUTURA FINAL (MOVIMENTAÇÃO FIXA)
       - name: Mover repo.json e Copiar .cs3 para pasta builds/
         run: |
           # 1. Cria a pasta 'builds'
           mkdir -p builds
           
-          # 2. Move o manifesto (Repo.json) para a pasta builds/
-          # O arquivo agora deve estar em build/plugins.json devido à Etapa 3
+          # 2. Move o manifesto (Repo.json)
           mv build/plugins.json builds/repo.json 
           
           # 3. COMANDO DE CÓPIA ROBUSTO para os .cs3: 
           find . -type f -name "*.cs3" -exec cp {} builds/ \; || true
           
-      # 5. CORREÇÃO DE URL (Remove o /builds/ do JSON) - NECESSÁRIO!
+      # 5. CORREÇÃO DE URL
       - name: Corrigir URLs do JSON para Remover '/builds/'
         run: |
-          # Remove a string '/builds/' de dentro do JSON, pois o deploy vai para a raiz.
           sed -i 's/\/builds\//\//g' builds/repo.json
+          
+      # 6. CRÍTICO: Configura o Git para permitir o commit no branch main
+      - name: Setup Git User for Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 6. DEPLOY FINAL: Faz commit dos arquivos na pasta 'builds/' do branch MAIN
+      # 7. DEPLOY FINAL
       - name: Commit Providers to main branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./builds
-          publish_branch: main # PUBLICAR NO BRANCH MAIN
-          destination_dir: builds # PUBLICAR DENTRO DA PASTA BUILDS/ DO MAIN
-          commit_message: "Deploy: Final CloudStream Standard Architecture Fix"
+          publish_branch: main
+          destination_dir: builds
+          commit_message: "Deploy: Final CloudStream Standard Architecture Fix (Git Configured)"

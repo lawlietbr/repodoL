@@ -1,10 +1,10 @@
+version = 1
+
 cloudstream {
-    version = 1
     description = "SuperFlix - Filmes e Séries em Português"
-    language = "pt-br"
+    language = "pt"
     authors = listOf("euluan1912")
     status = 1
     tvTypes = listOf("Movie", "TvSeries")
-    iconUrl = "https://superflix20.lol/favicon.ico"
-    isCrossPlatform = true
+    iconUrl = "https://superflix.com.br/wp-content/uploads/2023/08/superflix-logo.png"
 }

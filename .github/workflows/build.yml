@@ -3,14 +3,14 @@ name: Build Cloudstream Providers
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
+      - main # Roda no push para o branch principal
+  workflow_dispatch: # Permite rodar manualmente
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 1. CRÍTICO: Resolve o erro 403 (Permissão negada)
+      contents: write # ESSENCIAL: Permite que o bot faça commit no branch main
       
     steps:
       - uses: actions/checkout@v4
@@ -30,41 +30,35 @@ jobs:
       - name: Build with Gradle (Cria os .cs3)
         run: ./gradlew assemble --refresh-dependencies --info
 
-      - name: Generate repository.json
-        run: ./gradlew makePluginsJson # Esta etapa DEVE ser verificada se a Etapa 4 falhar
+      # 3. CORREÇÃO: Força o Gradle a gerar o JSON no caminho esperado.
+      - name: Generate repository.json at correct path
+        run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
 
-      # 4. CRIAÇÃO DA ESTRUTURA FINAL (MOVER E COPIAR)
-      - name: Mover repo.json e Copiar .cs3 para pasta de deploy
+      # 4. CRIAÇÃO DA ESTRUTURA FINAL (COPIAR OS ARQUIVOS)
+      - name: Mover repo.json e Copiar .cs3 para pasta builds/
         run: |
           # 1. Cria a pasta 'builds'
           mkdir -p builds
           
-          # 2. Move o manifesto (Repo.json)
-          # *** CORREÇÃO: Removido o '|| true' para que a falha seja detectada aqui ***
+          # 2. Move o manifesto (Repo.json) para a pasta builds/
+          # O arquivo agora deve estar em build/plugins.json devido à Etapa 3
           mv build/plugins.json builds/repo.json 
           
-          # 3. COMANDO DE CÓPIA ROBUSTO: 
+          # 3. COMANDO DE CÓPIA ROBUSTO para os .cs3: 
           find . -type f -name "*.cs3" -exec cp {} builds/ \; || true
           
-      # 5. CORREÇÃO CRÍTICA DE URL
-      - name: Corrigir URLs do JSON para Remover '/builds/' (Resolve o 404/Invalid Request)
+      # 5. CORREÇÃO DE URL (Remove o /builds/ do JSON) - NECESSÁRIO!
+      - name: Corrigir URLs do JSON para Remover '/builds/'
         run: |
+          # Remove a string '/builds/' de dentro do JSON, pois o deploy vai para a raiz.
           sed -i 's/\/builds\//\//g' builds/repo.json
 
-      # 6. DEPLOY CRÍTICO - Publica o conteúdo da pasta 'builds/'
-      - name: Deploy Providers to gh-pages branch
+      # 6. DEPLOY FINAL: Faz commit dos arquivos na pasta 'builds/' do branch MAIN
+      - name: Commit Providers to main branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./builds
-          publish_branch: gh-pages
-          commit_message: "Deploy: Automatic CloudStream Providers Final Working Version"
-
-      # 7. UPLOAD ARTIFACT (Opcional)
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: euluan-repo
-          path: |
-            builds/repo.json
-            **/build/libs/*.cs3
+          publish_branch: main # PUBLICAR NO BRANCH MAIN
+          destination_dir: builds # PUBLICAR DENTRO DA PASTA BUILDS/ DO MAIN
+          commit_message: "Deploy: Final CloudStream Standard Architecture Fix"

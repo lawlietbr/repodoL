@@ -36,30 +36,29 @@ jobs:
       - name: Generate plugins.json at correct path
         run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
 
-      # 4. CRIAÇÃO DA ESTRUTURA FINAL (MANIFESTO DUPLO) - Sintaxe YAML corrigida
+      # 4. CRIAÇÃO DA ESTRUTURA FINAL (MANIFESTO DUPLO) - CORRIGIDO O ERRO DE SINTAXE YAML
       - name: Mover plugins.json e Criar repo.json principal
         run: |
-          # Define a base da URL para o repo
+          # Define as URLs de base e do ícone
           BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/builds"
-          
+          REPO_ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/builds/RepoIcon.png"
+          PLUGINS_LIST="[\"$BASE_URL/plugins.json\"]"
+
           # 1. Cria a pasta 'builds'
           mkdir -p builds
           
           # 2. Move o manifesto de plugins para a pasta builds/ (mantendo o nome correto)
           mv build/plugins.json builds/plugins.json 
           
-          # 3. CRIA o manifesto principal (repo.json) usando EOF seguro
-          cat > builds/repo.json <<'EOF_JSON'
-{
-  "name": "CloudStream Brasil Repo",
-  "iconUrl": "https://raw.githubusercontent.com/${{ github.repository }}/main/builds/RepoIcon.png",
-  "description": "Repositório Brasileiro de Provedores CloudStream",
-  "manifestVersion": 1,
-  "pluginLists": [
-    "$BASE_URL/plugins.json"
-  ]
-}
-EOF_JSON
+          # 3. CRIA o manifesto principal (repo.json) usando 'echo' e variáveis.
+          # Esta sintaxe evita o erro YAML.
+          echo "{
+            \"name\": \"CloudStream Brasil Repo\",
+            \"iconUrl\": \"$REPO_ICON_URL\",
+            \"description\": \"Repositório Brasileiro de Provedores CloudStream\",
+            \"manifestVersion\": 1,
+            \"pluginLists\": $PLUGINS_LIST
+          }" > builds/repo.json
           
           # 4. COPIA os arquivos .cs3 e .jar para a pasta builds/
           find . -type f -name "*.cs3" -exec cp {} builds/ \; || true

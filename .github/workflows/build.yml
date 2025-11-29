@@ -45,20 +45,27 @@ jobs:
           # 2. Move o manifesto (Repo.json)
           mv build/plugins.json builds/repo.json || true
           
-          # 3. COPIA DEFINITIVA DOS CS3: Usa o find de forma robusta.
-          # Procura em todo o diretório de trabalho pelo arquivo .cs3 (que o gradle coloca em **/build/libs)
+          # 3. COPIA DEFINITIVA DOS CS3:
           find . -name "*.cs3" -print0 | xargs -0 cp -t builds/
           
-      # 5. DEPLOY CRÍTICO - Publica o conteúdo da pasta 'builds/'
+      # 5. CORREÇÃO CRÍTICA DE URL (Remove o /builds/ do JSON)
+      - name: Corrigir URLs do JSON para Remover '/builds/'
+        run: |
+          # O comando sed substitui todas as ocorrências de '/builds/' por '/' no repo.json.
+          # Isso é essencial porque o peaceiris move o conteúdo de 'builds/' para a raiz do gh-pages,
+          # mas o Gradle insere a string '/builds/' nas URLs.
+          sed -i 's/\/builds\//\//g' builds/repo.json
+
+      # 6. DEPLOY CRÍTICO - Publica o conteúdo da pasta 'builds/'
       - name: Deploy Providers to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./builds
           publish_branch: gh-pages
-          commit_message: "Deploy: Automatic CloudStream Providers Update (Final Attempt)"
+          commit_message: "Deploy: Automatic CloudStream Providers URL Final Fix"
 
-      # 6. UPLOAD ARTIFACT (Opcional)
+      # 7. UPLOAD ARTIFACT (Opcional)
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

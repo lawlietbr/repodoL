@@ -26,12 +26,28 @@ jobs:
         run: ./gradlew assemble --refresh-dependencies --info
 
       - name: Generate repository.json
+        # Cria o arquivo na raiz do projeto (geralmente como repository.json)
         run: ./gradlew makePluginsJson
+        
+      # --- CORREÇÃO DE CAMINHO INICIA AQUI ---
+
+      - name: Criar Pasta 'builds'
+        # Garante que a pasta de destino exista
+        run: mkdir -p builds
+
+      - name: Mover e Renomear Repo JSON
+        # Move o arquivo gerado (repository.json) para a pasta builds com o nome padrão (repo.json)
+        # Se makePluginsJson já criar como 'repo.json', ajuste a linha abaixo
+        run: mv repository.json builds/repo.json
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: euluan-repo
           path: |
-            repository.json
+            # Caminho corrigido para o arquivo JSON após ser movido
+            builds/repo.json
+            # Caminho para os arquivos CS3 que agora devem ser encontrados.
             **/build/libs/*.cs3
+
+# O arquivo build.yml deve ser substituído por este conteúdo.

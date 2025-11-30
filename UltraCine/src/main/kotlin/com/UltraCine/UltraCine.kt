@@ -4,7 +4,9 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.Actor
 import org.jsoup.nodes.Element
+import kotlin.math.roundToInt // Importar para corrigir o 'score'
 
 class UltraCine : MainAPI() {
     override var mainUrl = "https://ultracine.org"
@@ -45,7 +47,7 @@ class UltraCine : MainAPI() {
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        val title = this.selectFirst("header.entry-header h2.entry-title")?.text() ?: return null
+        val title = this.selectFirst("header.entry-header h1.entry-title")?.text() ?: return null
         val href = this.selectFirst("a.lnk-blk")?.attr("href") ?: return null
         
         val posterUrl = this.selectFirst("div.post-thumbnail figure img")?.let { img ->
@@ -105,36 +107,30 @@ class UltraCine : MainAPI() {
         val isSerie = url.contains("/serie/")
         
         return if (isSerie) {
-            if (iframeUrl != null) {
+            val episodes = if (iframeUrl != null) {
                 val iframeDocument = app.get(iframeUrl).document
-                val episodes = parseSeriesEpisodes(iframeDocument, iframeUrl)
-                
-                newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = plot
-                    this.rating = rating?.times(1000)?.toInt()
-                    this.tags = genres
-                    if (actors != null) addActors(actors)
-                    addTrailer(trailerUrl)
-                }
+                parseSeriesEpisodes(iframeDocument, iframeUrl)
             } else {
-                newTvSeriesLoadResponse(title, url, TvType.TvSeries, emptyList()) {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = plot
-                    this.rating = rating?.times(1000)?.toInt()
-                    this.tags = genres
-                    if (actors != null) addActors(actors)
-                    addTrailer(trailerUrl)
-                }
+                emptyList()
+            }
+            
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = plot
+                // CORRIGIDO: O campo 'rating' está obsoleto, use 'score' (0-100)
+                this.score = rating?.times(10)?.roundToInt()
+                this.tags = genres
+                if (actors != null) addActors(actors)
+                addTrailer(trailerUrl)
             }
         } else {
             newMovieLoadResponse(title, url, TvType.Movie, iframeUrl ?: "") {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                this.rating = rating?.times(1000)?.toInt()
+                // CORRIGIDO: O campo 'rating' está obsoleto, use 'score' (0-100)
+                this.score = rating?.times(10)?.roundToInt()
                 this.tags = genres
                 this.duration = parseDuration(duration)
                 if (actors != null) addActors(actors)
@@ -163,7 +159,8 @@ class UltraCine : MainAPI() {
                         episodeTitle
                     }
                     
-                    Episode(
+                    // CORRIGIDO: O construtor Episode() está obsoleto, use newEpisode()
+                    newEpisode(
                         data = episodeId,
                         name = cleanTitle,
                         season = seasonNumber,

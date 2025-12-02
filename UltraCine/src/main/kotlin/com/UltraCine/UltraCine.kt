@@ -1,11 +1,10 @@
 package com.UltraCine
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.* // toScore() deve ser importado por aqui.
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.toScore // <-- Adicionado explicitamente para resolver a referência
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.Actor
-// LINHA INCORRETA REMOVIDA: import com.lagradost.cloudstream3.APIHolder.toScore 
 import org.jsoup.nodes.Element
 import kotlin.math.roundToInt 
 
@@ -13,7 +12,7 @@ class UltraCine : MainAPI() {
     override var mainUrl = "https://ultracine.org"
     override var name = "UltraCine"
     override val hasMainPage = true
-    override var lang = "pt-br" // Define a bandeira do Brasil
+    override var lang = "pt-br" 
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(
         TvType.Movie,
@@ -119,7 +118,7 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // O uso de toScore() está correto, dependendo da importação de utils.*
+                // O uso de toScore() que estava falhando
                 this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 if (actors != null) addActors(actors)
@@ -130,7 +129,7 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // O uso de toScore() está correto, dependendo da importação de utils.*
+                // O uso de toScore() que estava falhando
                 this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 this.duration = parseDuration(duration)

@@ -5,10 +5,10 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.Actor
+// CORREÇÃO: Força a importação da função de extensão toScore
+import com.lagradost.cloudstream3.APIHolder.toScore 
 import org.jsoup.nodes.Element
 import kotlin.math.roundToInt 
-// CORREÇÃO 1: Removendo o import 'APIHolder.toScore' explícito
-// e confiando no import genérico de utilities para resolver a referência.
 
 class UltraCine : MainAPI() {
     override var mainUrl = "https://ultracine.org"
@@ -120,9 +120,8 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // CORREÇÃO 1: Remoção da chamada '.toScore()' e uso do construtor Score(nota, tipo)
-                // Isso deve resolver o erro 'Unresolved reference 'toScore''
-                this.score = rating?.times(10)?.roundToInt()?.let { Score(it, null) }
+                // CORREÇÃO: Usando a função de extensão toScore()
+                this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 if (actors != null) addActors(actors)
                 addTrailer(trailerUrl)
@@ -132,8 +131,8 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // CORREÇÃO 1: Remoção da chamada '.toScore()' e uso do construtor Score(nota, tipo)
-                this.score = rating?.times(10)?.roundToInt()?.let { Score(it, null) }
+                // CORREÇÃO: Usando a função de extensão toScore()
+                this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 this.duration = parseDuration(duration)
                 if (actors != null) addActors(actors)
@@ -162,8 +161,7 @@ class UltraCine : MainAPI() {
                         episodeTitle
                     }
                     
-                    // CORREÇÃO 2: Adoção do formato lambda (bloco) para a função newEpisode.
-                    // Isso resolve os erros de 'Argument type mismatch' e 'Too many arguments'.
+                    // CORREÇÃO ANTERIOR (formato lambda) que resolveu os erros de newEpisode:
                     newEpisode(episodeId) {
                         name = cleanTitle
                         season = seasonNumber

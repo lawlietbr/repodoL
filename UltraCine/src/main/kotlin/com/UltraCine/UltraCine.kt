@@ -1,7 +1,7 @@
 package com.UltraCine
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.toScore // <-- Adicionado explicitamente para resolver a referência
+import com.lagradost.cloudstream3.utils.* import com.lagradost.cloudstream3.utils.toScore // Importação explícita corrigida para resolver a referência
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.Actor
@@ -118,7 +118,6 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // O uso de toScore() que estava falhando
                 this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 if (actors != null) addActors(actors)
@@ -129,7 +128,6 @@ class UltraCine : MainAPI() {
                 this.posterUrl = poster
                 this.year = year
                 this.plot = plot
-                // O uso de toScore() que estava falhando
                 this.score = rating?.times(10)?.roundToInt()?.toScore()
                 this.tags = genres
                 this.duration = parseDuration(duration)

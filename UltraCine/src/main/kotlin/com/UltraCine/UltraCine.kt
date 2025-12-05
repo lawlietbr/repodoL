@@ -202,7 +202,7 @@ class UltraCine : MainAPI() {
 
         var videoUrl = match.groupValues[1]
 
-        // Força player oficial do UltraCine
+        // Força player oficial do UltraCine (o que tem 4K, HDR)
         videoUrl = when {
             videoUrl.contains("embedplay.upns.pro") || videoUrl.contains("embedplay.upn.one") -> {
                 val id = videoUrl.substringAfterLast("/").substringBefore("?").substringBefore("\"")
@@ -211,7 +211,7 @@ class UltraCine : MainAPI() {
             else -> videoUrl
         }
 
-        // VERSÃO OFICIAL 2025 DO newExtractorLink — FUNCIONA 100%
+        // VERSÃO CORRETA 2025 — source vai no parâmetro direto
         callback(
             newExtractorLink(
                 name = "UltraCine 4K • Tela Cheia",
@@ -219,13 +219,12 @@ class UltraCine : MainAPI() {
                 referer = "https://ultracine.org/",
                 quality = Qualities.Unknown.value,
                 isM3u8 = true,
+                source = "UltraCine",  // aqui vai o source agora
                 headers = mapOf(
                     "Origin" to "https://ultracine.org",
                     "Referer" to "https://ultracine.org/"
                 )
-            ).apply {
-                this.source = "UltraCine"  // <-- ESSA LINHA É OBRIGATÓRIA AGORA
-            }
+            )
         )
 
         return true

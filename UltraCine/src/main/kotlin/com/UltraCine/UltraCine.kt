@@ -177,7 +177,6 @@ class UltraCine : MainAPI() {
     }
 
     override suspend fun loadLinks(
-    // data pode ser: URL completa ou só o ID do episódio (ex: 281791)
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
@@ -185,16 +184,48 @@ class UltraCine : MainAPI() {
 ): Boolean {
     if (data.isBlank()) return false
 
-    try {
-        // Caso 1: data é só número → é episódio do assistirseriesonline
-        if (data.matches(Regex("^\\d+$"))) {
-            val episodeUrl = "https://assistirseriesonline.icu/episodio/$data"
-            return loadFromEpisodePage(episodeUrl, subtitleCallback, callback)
-        }
+    val url = when {
+        data.matches(Regex("^\\d+$")) -> "https://assistirseriesonline.icu/episodio/$data"
+        data.startsWith("http") -> data
+        else -> return false
+    }
 
-        // Caso 2: data já é URL completa (filme ou página antiga)
-        if (data.startsWith("http")) {
-            return loadFromEpisodePage(data, subtitleCallback, callback)
+    try {
+        val res = app.get(url, referer = "https://ultracine.org/", timeout = 30)
+        val html = res.text
+
+        // PEGA O LINK DIRETO DO JS (o que realmente funciona em 2025)
+        val linkRegex = Regex("""["'](?:file|src|source)["']?\s*:\s*["']([^"']+embedplay[^"']+)""")
+        val match = linkRegex.find(html)
+
+        if (match != null) {
+            var videoUrl = match.groupValues[1]
+
+            // FORÇA O PLAYER LIMPO, SEM MARCA D'ÁGUA, TELA CHEIA E QUALIDADE CORRETA
+            videoUrl = when {
+                videoUrl.contains("embedplay.upns.pro") || 
+                videoUrl.contains("embedplay.upn.one") -> {
+                    val id = videoUrl.substringAfterLast("/").substringBefore("?").substringBefore("\"")
+                    "https://player.ultracine.org/watch/$id"
+                }
+                else -> videoUrl
+            }
+
+            callback.invoke(
+                ExtractorLink(
+                    source = "UltraCine",
+                    name = "UltraCine 4K • Sem anúncios",
+                    url = videoUrl,
+                    referer = "https://ultracine.org/",
+                    quality = Qualities.Unknown.value, // CloudStream detecta sozinho do M3U8
+                    isM3u8 = true,
+                    headers = mapOf(
+                        "Origin" to "https://ultracine.org",
+                        "Referer" to "https://ultracine.org/"
+                    )
+                )
+            )
+            return true
         }
 
     } catch (e: Exception) {

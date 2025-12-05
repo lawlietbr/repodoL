@@ -61,7 +61,7 @@ class UltraCine : MainAPI() {
         return newMovieSearchResponse(title, href, TvType.Movie) {
             this.posterUrl = posterUrl
             this.year = year
-            this.quality = getSearchQualityFromString(this@toSearchResult.selectFirst("span.post-ql")?.text())
+            this.quality = getQualityFromString(this@toSearchResult.selectFirst("span.post-ql")?.text())
         }
     }
 
@@ -262,13 +262,12 @@ class UltraCine : MainAPI() {
     }
 
     private fun getQualityFromString(qualityStr: String?): Qualities? {
+        private fun getQuality(qualityStr: String?): Int {
         return when {
-    qualityStr?.contains("4k", ignoreCase = true) == true -> Qualities.P2160.value
-    qualityStr?.contains("1080p", ignoreCase = true) == true -> Qualities.P1080.value
-    qualityStr?.contains("720p", ignoreCase = true) == true -> Qualities.P720.value
-    qualityStr?.contains("480p", ignoreCase = true) == true -> Qualities.P480.value
-    else -> Qualities.Unknown.value
-       
+            qualityStr?.contains("4k", ignoreCase = true) == true -> Qualities.P2160.value
+            qualityStr?.contains("1080p", ignoreCase = true) == true -> Qualities.P1080.value
+            qualityStr?.contains("720p", ignoreCase = true) == true -> Qualities.P720.value
+            qualityStr?.contains("480p", ignoreCase = true) == true -> Qualities.P480.value
+            else -> Qualities.Unknown.value
+          }
         }
-    }
-}

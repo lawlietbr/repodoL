@@ -214,20 +214,6 @@ class UltraCine : MainAPI() {
 
         // Constructor old, compatível e sem erros
         
-         // SUBSTITUI ESSE BLOCO INTEIRO:
-callback(
-    ExtractorLink(
-        source = "UltraCine",
-        name = "UltraCine 4K • Tela Cheia",
-        url = videoUrl,
-        referer = "https://ultracine.org/",
-        quality = Qualities.Unknown.value,
-        isM3u8 = true,
-        headers = mapOf("Origin" to "https://ultracine.org")
-    )
-)
-
-// POR ESSE (100% compatível 2025):
 callback.invoke(
     newExtractorLink(
         url = videoUrl,

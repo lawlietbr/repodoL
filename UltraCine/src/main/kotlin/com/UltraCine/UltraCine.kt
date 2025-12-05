@@ -261,13 +261,16 @@ class UltraCine : MainAPI() {
         }
     }
 
-    private fun getQualityFromString(qualityStr: String?): Qualities? {
-        private fun getQuality(qualityStr: String?): Int {
+    // FUNÇÃO CORRETA FORA DE QUALQUER OUTRA
+    private fun getQuality(qualityStr: String?): Int {
         return when {
             qualityStr?.contains("4k", ignoreCase = true) == true -> Qualities.P2160.value
             qualityStr?.contains("1080p", ignoreCase = true) == true -> Qualities.P1080.value
             qualityStr?.contains("720p", ignoreCase = true) == true -> Qualities.P720.value
             qualityStr?.contains("480p", ignoreCase = true) == true -> Qualities.P480.value
             else -> Qualities.Unknown.value
-          }
         }
+    }
+}
+
+// FECHA A CLASSE AQUI COM APENAS UM }

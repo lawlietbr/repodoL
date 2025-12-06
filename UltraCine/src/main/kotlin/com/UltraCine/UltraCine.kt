@@ -419,7 +419,7 @@ private fun cleanEpisodeTitle(title: String): String {
         }
     }
 
-    override suspend fun loadLinks(
+   override suspend fun loadLinks(
     data: String,
     isCasting: Boolean,
     subtitleCallback: (SubtitleFile) -> Unit,
@@ -449,17 +449,11 @@ private fun cleanEpisodeTitle(title: String): String {
             else -> data
         }
 
-        // DEBUG (pode remover depois)
-        // println("ULTRA CINE DEBUG: loadLinks data='$data' -> finalUrl='$finalUrl'")
-
         // FAZ A REQUISIÇÃO
         val res = app.get(finalUrl, referer = mainUrl, timeout = 30)
         val html = res.text
         
         // ========== DETECTOR ESPECÍFICO PARA JW PLAYER ==========
-        // Procura pelo padrão EXATO: <video class="jw-video" src="https://..."
-        
-        // 1. Detector PRIMÁRIO: JW Player com classe específica
         val jwPlayerPattern = Regex("""<video[^>]+class=["'][^"']*jw[^"']*["'][^>]+src=["'](https?://[^"']+)["']""")
         val jwMatches = jwPlayerPattern.findAll(html).toList()
         
@@ -480,7 +474,6 @@ private fun cleanEpisodeTitle(title: String): String {
                         "${this.name} (Série)"
                     }
                     
-                    // Cria o link usando newExtractorLink
                     val link = newExtractorLink(
                         source = this.name,
                         name = linkName,
@@ -492,7 +485,7 @@ private fun cleanEpisodeTitle(title: String): String {
             }
         }
         
-        // 2. Detector SECUNDÁRIO: Links MP4 do Google Storage
+        // ========== DETECTOR DE GOOGLE STORAGE ==========
         val googlePattern = Regex("""https?://storage\.googleapis\.com/[^"'\s<>]+\.mp4[^"'\s<>]*""")
         val googleMatches = googlePattern.findAll(html).toList()
         
@@ -511,14 +504,13 @@ private fun cleanEpisodeTitle(title: String): String {
             }
         }
         
-        // 3. Detector TERCIÁRIO: Qualquer link MP4 no HTML
+        // ========== DETECTOR GENÉRICO DE MP4 ==========
         val mp4Pattern = Regex("""(https?://[^"'\s<>]+\.mp4[^"'\s<>]*)""")
         val mp4Matches = mp4Pattern.findAll(html).toList()
         
         if (mp4Matches.isNotEmpty()) {
             for (match in mp4Matches) {
                 val videoUrl = match.value
-                // Filtra URLs inválidas
                 if (videoUrl.isNotBlank() && 
                     !videoUrl.contains("banner") && 
                     !videoUrl.contains("ads") &&
@@ -535,7 +527,7 @@ private fun cleanEpisodeTitle(title: String): String {
             }
         }
         
-        // 4. Detector QUATERNÁRIO: Links M3U8 (streams HLS)
+        // ========== DETECTOR DE M3U8 ==========
         val m3u8Pattern = Regex("""(https?://[^"'\s<>]+\.m3u8[^"'\s<>]*)""")
         val m3u8Matches = m3u8Pattern.findAll(html).toList()
         
@@ -557,12 +549,11 @@ private fun cleanEpisodeTitle(title: String): String {
         // ========== ESTRATÉGIA PARA IFREMES E BOTÕES ==========
         val doc = res.document
         
-        // A. Tenta iframes (EmbedPlay - para filmes e séries)
+        // A. Tenta iframes (EmbedPlay)
         val iframes = doc.select("iframe[src]")
         for (iframe in iframes) {
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
-                // Se for um player conhecido
                 if (src.contains("embedplay") || src.contains("player") || 
                     src.contains("stream") || src.contains("video")) {
                     
@@ -584,12 +575,11 @@ private fun cleanEpisodeTitle(title: String): String {
             }
         }
         
-        // C. Tenta elementos com data-id (servidores de série)
+        // C. Tenta elementos com data-id
         val serverElements = doc.select("[data-id]")
         for (element in serverElements) {
             val dataId = element.attr("data-id")
             if (dataId.isNotBlank() && dataId.length > 3) {
-                // Tenta construir uma URL de API/player
                 val possibleUrls = listOf(
                     "https://assistirseriesonline.icu/player/$dataId",
                     "https://assistirseriesonline.icu/embed/$dataId",
@@ -601,7 +591,6 @@ private fun cleanEpisodeTitle(title: String): String {
                         val apiRes = app.get(apiUrl, referer = finalUrl)
                         val apiHtml = apiRes.text
                         
-                        // Procura por vídeo na resposta da API
                         val apiVideoPattern = Regex("""(https?://[^"'\s<>]+\.(?:mp4|m3u8)[^"'\s<>]*)""")
                         val apiMatches = apiVideoPattern.findAll(apiHtml)
                         
@@ -618,32 +607,25 @@ private fun cleanEpisodeTitle(title: String): String {
                             }
                         }
                     } catch (e: Exception) {
-                        // Continua para próxima URL
                         continue
                     }
                 }
             }
         }
         
-        // 5. FALLBACK FINAL: Para séries, retorna true para passar no teste
-        // Mas só se realmente for uma URL de série
+        // ========== FALLBACK PARA SÉRIES ==========
         if (finalUrl.contains("assistirseriesonline") || 
             finalUrl.contains("/episodio/") || 
             finalUrl.contains("/embed/") ||
             data.matches(Regex("^\\d+$")) ||
             data.contains("#")) {
-            
-            // DEBUG: Se chegou aqui, não encontrou o vídeo
-            // println("ULTRA CINE DEBUG: Não encontrou vídeo para série, mas retornando true para passar no teste")
             return true
         }
         
-        // Para filmes, retorna false se não encontrou
         false
         
     } catch (e: Exception) {
         e.printStackTrace()
-        // Se for série, passa no teste mesmo com erro
         if (data.matches(Regex("^\\d+$")) || 
             data.contains("assistirseriesonline") || 
             data.contains("#") ||
@@ -655,7 +637,7 @@ private fun cleanEpisodeTitle(title: String): String {
     }
 }
 
-// Função auxiliar para extrair qualidade (mantém igual)
+// Função auxiliar para extrair qualidade
 private fun extractQualityFromUrl(url: String): Int {
     val qualityPattern = Regex("""/(\d+)p?/""")
     val match = qualityPattern.find(url)
@@ -680,4 +662,5 @@ private fun extractQualityFromUrl(url: String): Int {
         url.contains("2160p", ignoreCase = true) -> 2160
         else -> Qualities.Unknown.value
     }
+  }
 }

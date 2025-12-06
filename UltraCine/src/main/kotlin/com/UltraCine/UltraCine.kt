@@ -149,15 +149,16 @@ class UltraCine : MainAPI() {
     }
 
     // Função auxiliar para parsing de episódios, deve estar dentro da classe UltraCine
+        // Função auxiliar para parsing de episódios
     private suspend fun parseSeriesEpisodes(iframeDocument: org.jsoup.nodes.Document, baseUrl: String): List<Episode> {
         val episodes = mutableListOf<Episode>()
         val seasons = iframeDocument.select("header.header ul.header-navigation li")
         
         for (seasonElement in seasons) {
-            val seasonNumber = seasonElement.attr("data-season-number").toIntOrNull() ?: continue
+            // CORREÇÃO: Usa 'return@for' para pular para o próximo 'seasonElement' no loop
+            val seasonNumber = seasonElement.attr("data-season-number").toIntOrNull() ?: continue 
             val seasonId = seasonElement.attr("data-season-id")
             
-            // Seletor corrigido para pegar episódios associados ao seasonId
             val seasonEpisodes = iframeDocument.select("li[data-season-id='$seasonId']")
                 .mapNotNull { episodeElement ->
                     val episodeId = episodeElement.attr("data-episode-id")
@@ -170,7 +171,7 @@ class UltraCine : MainAPI() {
                         episodeTitle
                     }
                     
-                    // Usa newEpisode (CORRIGE DEPRECATION)
+                    // Usa newEpisode (para evitar deprecation)
                     newEpisode(episodeId) {
                         this.name = cleanTitle
                         this.season = seasonNumber
@@ -183,6 +184,7 @@ class UltraCine : MainAPI() {
         
         return episodes
     }
+    
     
     // ... (loadLinks e parseDuration devem seguir a última versão que te enviei, garantindo que estejam DENTRO da classe UltraCine)
     

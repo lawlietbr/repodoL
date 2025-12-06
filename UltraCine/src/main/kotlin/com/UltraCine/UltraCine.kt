@@ -149,59 +149,46 @@ class UltraCine : MainAPI() {
         }
     }
 
-    override suspend fun loadLinks(
+        override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val link = if (data.matches(Regex("^\\d+$"))) {
-            "https://assistirseriesonline.icu/episodio/$data/"
-        } else data
-
-        try {
-            val doc = app.get(link, referer = mainUrl).document
-
-            // Esta lógica é para extrair links de botões DENTRO da página de player (link)
-            // Se o link já for o link do extrator (data-source), esta seção deve ser revisada
-            doc.select("button[data-source]").forEach {
-                val src = it.attr("data-source")
-                if (src.isNotBlank()) {
-                    // Chamada corrigida, pois 'data' já deve ser o link do extrator
-                    loadExtractor(
-                        src, 
-                        link, // referer
-                        subtitleCallback, 
-                        callback
-                    )
-                }
-            }
-            
-            // Esta lógica tenta extrair iframes DENTRO da página de player (link)
-            doc.select("iframe").forEach { iframe ->
-                val src = iframe.attr("src")
-                if (src.isNotBlank() && src.startsWith("http")) {
-                    // Chamada corrigida, pois 'data' já deve ser o link do extrator
-                    loadExtractor(
-                        src, 
-                        link, // referer
-                        subtitleCallback, 
-                        callback
-                    )
-                }
-            }
-        } catch (_: Exception) {}
-
-        // Se o link for um link direto de extrator (o que esperamos), a lógica acima será suficiente.
-        // Se for um link de player de botão (data-source), o loadExtractor deve ser chamado diretamente.
         
-        // Tenta processar o link 'link' (que é o data-source) diretamente como um extrator.
-        if (!link.startsWith(mainUrl)) { // Evita tentar extrair a página principal como vídeo
-            loadExtractor(link, data, subtitleCallback, callback)
+        // 1. Trata URLs de Episódio (Se a data for apenas um ID numérico)
+        val link = if (data.matches(Regex("^\\d+$"))) {
+            // Este é um ID de episódio (caso de séries)
+            "https://assistirseriesonline.icu/episodio/$data/"
+        } else data // 'link' é agora o link do data-source ou o link do episódio.
+
+        // Se a URL for do assistiroseriesonline, precisamos fazer mais uma requisição (Encadeamento)
+        if (link.contains("assistirseriesonline.icu") && link.contains("episodio")) {
+            // Se for um link de episódio, carregue a página e extraia o iframe real
+            try {
+                val doc = app.get(link, referer = mainUrl).document
+                doc.select("iframe").forEach { iframe ->
+                    val src = iframe.attr("src")
+                    if (src.isNotBlank() && src.startsWith("http")) {
+                        loadExtractor(src, link, subtitleCallback, callback)
+                    }
+                }
+                return true // Retorna true se tentou extrair de uma página de episódio
+            } catch (_: Exception) {
+                return false
+            }
+        }
+        
+        // 2. Se a 'link' for um link direto de Extrator (O data-source: playembedapi.site/...)
+        // Tenta processar o link diretamente
+        if (!link.startsWith(mainUrl)) {
+             loadExtractor(link, data, subtitleCallback, callback)
         }
 
+        // 3. Retorno final obrigatório
         return true
     }
+
 
     private fun parseDuration(text: String): Int? {
         if (text.isBlank()) return null

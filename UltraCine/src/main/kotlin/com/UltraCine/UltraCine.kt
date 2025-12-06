@@ -192,8 +192,6 @@ class UltraCine : MainAPI() {
         val html = res.text
         
         // ========== DETECTOR ESPECÍFICO PARA JW PLAYER ==========
-        // O padrão EXATO que você viu:
-        // src="https://storage.googleapis.com/mediastorage/...mp4#mp4/chunk/..."
         
         // 1. Procura por elementos <video> do JW Player
         val jwPlayerPattern = Regex("""<video[^>]+class=["'][^"']*jw[^"']*["'][^>]+src=["'](https?://[^"']+)["']""")
@@ -207,15 +205,17 @@ class UltraCine : MainAPI() {
                     val quality = extractQualityFromUrl(videoUrl)
                     val isM3u8 = videoUrl.contains(".m3u8")
                     
-                    @Suppress("DEPRECATION")
-                    val link = ExtractorLink(
+                    // USANDO newExtractorLink CORRETAMENTE
+                    val link = newExtractorLink(
                         source = this.name,
                         name = "${this.name} (${if (quality != Qualities.Unknown.value) "${quality}p" else "Direct"})",
-                        url = videoUrl,
-                        referer = finalUrl,
-                        quality = quality,
-                        isM3u8 = isM3u8
-                    )
+                        url = videoUrl
+                    ) {
+                        // Configurações adicionais
+                        this.referer = finalUrl
+                        this.quality = quality
+                        this.isM3u8 = isM3u8
+                    }
                     callback.invoke(link)
                     return true
                 }
@@ -232,15 +232,15 @@ class UltraCine : MainAPI() {
                 if (videoUrl.isNotBlank() && !videoUrl.contains("banner")) {
                     val quality = extractQualityFromUrl(videoUrl)
                     
-                    @Suppress("DEPRECATION")
-                    val link = ExtractorLink(
+                    val link = newExtractorLink(
                         source = this.name,
                         name = "${this.name} (${if (quality != Qualities.Unknown.value) "${quality}p" else "Google"})",
-                        url = videoUrl,
-                        referer = finalUrl,
-                        quality = quality,
-                        isM3u8 = false
-                    )
+                        url = videoUrl
+                    ) {
+                        this.referer = finalUrl
+                        this.quality = quality
+                        this.isM3u8 = false
+                    }
                     callback.invoke(link)
                     return true
                 }
@@ -257,15 +257,15 @@ class UltraCine : MainAPI() {
                 if (videoUrl.isNotBlank() && !videoUrl.contains("banner")) {
                     val quality = extractQualityFromUrl(videoUrl)
                     
-                    @Suppress("DEPRECATION")
-                    val link = ExtractorLink(
+                    val link = newExtractorLink(
                         source = this.name,
                         name = "${this.name} (${if (quality != Qualities.Unknown.value) "${quality}p" else "MP4"})",
-                        url = videoUrl,
-                        referer = finalUrl,
-                        quality = quality,
-                        isM3u8 = false
-                    )
+                        url = videoUrl
+                    ) {
+                        this.referer = finalUrl
+                        this.quality = quality
+                        this.isM3u8 = false
+                    }
                     callback.invoke(link)
                     return true
                 }

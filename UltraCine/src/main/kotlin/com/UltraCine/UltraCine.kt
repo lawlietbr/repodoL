@@ -272,8 +272,8 @@ class UltraCine : MainAPI() {
         }
     }
 
-    // Função auxiliar para extrair e adicionar links usando newExtractorLink
-    private fun extractAndAddLink(videoUrl: String, referer: String, callback: (ExtractorLink) -> Unit) {
+    // Função auxiliar para extrair e adicionar links
+    private suspend fun extractAndAddLink(videoUrl: String, referer: String, callback: (ExtractorLink) -> Unit) {
         val quality = when {
             videoUrl.contains("360p", ignoreCase = true) -> Qualities.P360.value
             videoUrl.contains("480p", ignoreCase = true) -> Qualities.P480.value
@@ -285,16 +285,18 @@ class UltraCine : MainAPI() {
         
         val isM3u8 = videoUrl.contains("m3u8", ignoreCase = true)
         
-        callback.invoke(
-            newExtractorLink(
-                name = "${this.name} (${if (quality != Qualities.Unknown.value) "${quality}p" else "Unknown"})",
-                url = videoUrl,
-                referer = referer,
-                quality = quality,
-                isM3u8 = isM3u8
-            ) {
-                this.name = this@UltraCine.name
-            }
-        )
+        // Usando newExtractorLink corretamente
+        val link = newExtractorLink(
+            source = this.name,
+            name = "${this.name} (${if (quality != Qualities.Unknown.value) "${quality}p" else "Unknown"})",
+            url = videoUrl
+        ) {
+            // Configurações adicionais dentro do bloco initializer
+            this.referer = referer
+            this.quality = quality
+            this.isM3u8 = isM3u8
+        }
+        
+        callback.invoke(link)
     }
 }

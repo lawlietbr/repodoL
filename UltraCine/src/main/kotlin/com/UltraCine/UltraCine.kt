@@ -278,8 +278,9 @@ class UltraCine : MainAPI() {
 
 // ... (Função parseDuration permanece)
 
-    private fun parseDuration(text: String): Int? {
-        if (text.isBlank()) return null
+    private fun parseDuration(text: String?): Int? { // Mude de 'text: String' para 'text: String?'
+    if (text.isNullOrBlank()) return null
+       
         val h = Regex("(\\d+)h").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val m = Regex("(\\d+)m").find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         return if (h > 0 || m > 0) h * 60 + m else null

@@ -281,5 +281,6 @@ class UltraCine : MainAPI() {
         println("DEBUG: Erro ao carregar links: ${e.message}")
         e.printStackTrace()
         false
-    }
+      }
+   }
 }

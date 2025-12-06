@@ -17,5 +17,5 @@ class EmbedPlayUpnsPro : VidStack() {
 // Mantenha este, caso o UltraCine use o .one
 class EmbedPlayUpnOne : VidStack() {
     override var name = "EmbedPlay UpnOne"
-    override var mainUrl = "https://embedplay.upn.one"
+    override var mainUrl = "http://embedplay.upn.one"
 }

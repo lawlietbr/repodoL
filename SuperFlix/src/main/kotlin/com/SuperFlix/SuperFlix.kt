@@ -96,21 +96,25 @@ class SuperFlix : MainAPI() {
         return document.select("a.card").mapNotNull { it.toSearchResponse() }
     }
 
-    // DENTRO DA FUNÇÃO load(url: String)
-
-    override suspend fun load(url: String): LoadResponse {
+        override suspend fun load(url: String): LoadResponse {
         val response = app.get(url, headers = defaultHeaders) 
         val document = response.document
 
         val isMovie = url.contains("/filme/")
 
-        // CORREÇÃO: Usando seletor simples <h1>.
-        val title = document.selectFirst("h1")?.text()?.trim()
-            ?: document.selectFirst("div.entry-content h1")?.text()?.trim() 
-            ?: throw ErrorLoadingException("Seletor de título incorreto. Favor inspecionar o elemento do título.")
+        // CORREÇÃO DEFINITIVA DO SELETOR: Tentando seletores mais robustos
+        val title = document.selectFirst("h1.entry-title")?.text()?.trim()
+            ?: document.selectFirst("h1")?.text()?.trim() 
+            ?: document.selectFirst("div.col-md-8 h1")?.text()?.trim()
+            ?: throw ErrorLoadingException("Não foi possível extrair o título do filme. Por favor, verifique o seletor H1.")
             
+        // O restante dos seletores de poster, plot e tags também estão sendo corrigidos
         val posterUrl = document.selectFirst("div.poster img")?.attr("src")?.let { fixUrl(it) }
-        val plot = document.selectFirst("p.text-gray-400")?.text()?.trim()
+        // Seletor de plot corrigido (assumindo que seja o primeiro parágrafo após a sinopse)
+        val plot = document.selectFirst("div.col-md-8 p:nth-child(2)")?.text()?.trim() 
+            ?: document.selectFirst("p.text-gray-400")?.text()?.trim()
+            ?: document.selectFirst("div.mt-4 p")?.text()?.trim()
+
         val tags = document.select("a[href*=/genero/]").map { it.text().trim() }
         val year = title.substringAfterLast("(").substringBeforeLast(")").toIntOrNull()
 

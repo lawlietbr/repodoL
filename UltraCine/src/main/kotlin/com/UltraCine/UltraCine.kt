@@ -250,13 +250,13 @@ class UltraCine : MainAPI() {
 
              // Linha ~252:
 // ========== 3. ESTRATÉGIA DE FALLBACK (WebViewResolver) ==========
-// Linha ~252: Condição com Regex explícito para evitar conflito String/Regex
-if (html.contains(Regex("apiblogger\\.click", RegexOption.IGNORE_CASE)) || 
-    finalUrl.contains(Regex("episodio/", RegexOption.IGNORE_CASE))) {
+// Linha ~252: matches com Regex explícito para evitar conflito String/Regex + ignoreCase
+if (html.matches(Regex("apiblogger\\.click", RegexOption.IGNORE_CASE)) || 
+    finalUrl.matches(Regex("episodio/", RegexOption.IGNORE_CASE))) {
 
     val resolver = WebViewResolver(html)
 
-    // Chamada direta (sem launch, pois loadLinks é suspend)
+    // Chamada direta (não suspend, roda blocking no Cloudstream3 atual)
     val (mainRequest, subRequests) = resolver.resolveUsingWebView(finalUrl)
 
     // Processa mainRequest primeiro

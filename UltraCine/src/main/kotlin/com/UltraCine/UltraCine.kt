@@ -167,7 +167,7 @@ class UltraCine : MainAPI() {
         }
     }
 
-    // VERSÃO SIMPLIFICADA DO loadLinks QUE COMPILA
+    // VERSÃO SIMPLIFICADA DO loadLinks QUE USA newExtractorLink CORRETAMENTE
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -204,16 +204,17 @@ class UltraCine : MainAPI() {
                     if (videoUrl != null) {
                         println("DEBUG: Vídeo extraído: $videoUrl")
                         
-                        callback.invoke(
-                            ExtractorLink(
-                                this.name,
-                                "${this.name} (Série)",
-                                videoUrl,
-                                episodeUrl,
-                                extractQualityFromUrl(videoUrl),
-                                videoUrl.contains(".m3u8")
-                            )
-                        )
+                        // USA newExtractorLink CORRETAMENTE
+                        val link = newExtractorLink(
+                            source = this.name,
+                            name = "${this.name} (Série)",
+                            url = videoUrl,
+                            referer = episodeUrl,
+                            quality = extractQualityFromUrl(videoUrl)
+                        ) {
+                            this.isM3u8 = videoUrl.contains(".m3u8")
+                        }
+                        callback.invoke(link)
                         return true
                     }
                 }
@@ -224,16 +225,17 @@ class UltraCine : MainAPI() {
                     println("DEBUG: URLs de vídeo encontradas: ${videoUrls.size}")
                     
                     videoUrls.forEach { videoUrl ->
-                        callback.invoke(
-                            ExtractorLink(
-                                this.name,
-                                "${this.name} (Direct)",
-                                videoUrl,
-                                episodeUrl,
-                                extractQualityFromUrl(videoUrl),
-                                videoUrl.contains(".m3u8")
-                            )
-                        )
+                        // USA newExtractorLink CORRETAMENTE
+                        val link = newExtractorLink(
+                            source = this.name,
+                            name = "${this.name} (Direct)",
+                            url = videoUrl,
+                            referer = episodeUrl,
+                            quality = extractQualityFromUrl(videoUrl)
+                        ) {
+                            this.isM3u8 = videoUrl.contains(".m3u8")
+                        }
+                        callback.invoke(link)
                     }
                     return true
                 }

@@ -152,32 +152,32 @@ class UltraCine : MainAPI() {
     subtitleCallback: (SubtitleFile) -> Unit,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
+
     if (data.isBlank()) return false
 
+    // Detecta se é episódio de série
     val isEpisode = data.matches(Regex("^\\d+$")) || data.contains("assistirseriesonline.icu")
 
-    val finalUrl = if (isEpisode && data.matches(Regex("^\\d+$"))) {
+    val episodeUrl = if (data.matches(Regex("^\\d+$"))) {
         "https://assistirseriesonline.icu/episodio/$data"
-    } else {
-        data
-    }
+    } else data
 
-    try {
+    return try {
         if (isEpisode) {
-            // WEBVIEW PARA EPISÓDIOS: Simula skip ad + play, depois loadExtractor pega o upns.one
-            val res = app.get(finalUrl, referer = mainUrl)
-            WebViewResolver(res.text).resolveUsingWebView(finalUrl) { extractedUrl ->
-                // Aqui o upns.one resolve automaticamente (sem newExtractorLink!)
-                loadExtractor(extractedUrl, finalUrl, subtitleCallback, callback)
+            // Força WebView pra pular anúncio e ativar o JW Player
+            val response = app.get(episodeUrl, referer = mainUrl)
+            WebViewResolver(response.text).resolveUsingWebView(episodeUrl) { link ->
+                // O extractor upns.one pega automaticamente aqui (sem marca d'água)
+                loadExtractor(link, episodeUrl, subtitleCallback, callback)
             }
-            delay(12000) // 12s: tempo pro anúncio sumir + JW Player injetar o src do Google Storage
-            return true // CloudStream espera o WebView em background
+            delay(12000) // 12 segundos é o ponto doce (anúncio + play/pause
+            true // CloudStream espera o WebView rodar
+        } else {
+            // Filmes: usa os extractors normais (upns.one, embedone, etc.)
+            loadExtractor(episodeUrl, mainUrl, subtitleCallback, callback)
         }
-
-        // FILMES: Usa o extractor normal (upns.one já resolve)
-        return loadExtractor(finalUrl, mainUrl, subtitleCallback, callback)
     } catch (e: Exception) {
         e.printStackTrace()
-        return isEpisode // Episódios sempre retornam true (WebView tenta)
+        isEpisode // se for episódio, retorna true mesmo com erro (WebView ainda tenta)
     }
 }

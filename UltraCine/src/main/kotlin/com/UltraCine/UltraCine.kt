@@ -343,11 +343,11 @@ class UltraCine : MainAPI() {
                             videoUrl.contains("googlevideo")) {
                             println("🎬 URL de vídeo em script: $videoUrl")
                             
-                            // USANDO A FUNÇÃO CORRETA PARA CRIAR ExtractorLink
-                            callback.invoke(
+                            @Suppress("DEPRECATION")
+                            callback(
                                 ExtractorLink(
-                                    this.name,
-                                    this.name,
+                                    name,
+                                    name,
                                     videoUrl,
                                     iframeUrl,
                                     Qualities.Unknown.value,
@@ -379,10 +379,11 @@ class UltraCine : MainAPI() {
             if (videoUrl != null) {
                 println("🎬 URL direta encontrada: $videoUrl")
                 
-                callback.invoke(
+                @Suppress("DEPRECATION")
+                callback(
                     ExtractorLink(
-                        this.name,
-                        this.name,
+                        name,
+                        name,
                         videoUrl,
                         iframeUrl,
                         Qualities.Unknown.value,
@@ -452,10 +453,11 @@ class UltraCine : MainAPI() {
                 if (videoUrl != null) {
                     println("🎬 URL encontrada na API: $videoUrl")
                     
-                    callback.invoke(
+                    @Suppress("DEPRECATION")
+                    callback(
                         ExtractorLink(
-                            this.name,
-                            this.name,
+                            name,
+                            name,
                             videoUrl,
                             apiUrl,
                             Qualities.Unknown.value,
@@ -511,10 +513,11 @@ class UltraCine : MainAPI() {
                     if (videoUrl != null) {
                         println("🎬 URL do player: $videoUrl")
                         
-                        callback.invoke(
+                        @Suppress("DEPRECATION")
+                        callback(
                             ExtractorLink(
-                                this.name,
-                                this.name,
+                                name,
+                                name,
                                 videoUrl,
                                 episodeUrl,
                                 Qualities.Unknown.value,
@@ -531,10 +534,11 @@ class UltraCine : MainAPI() {
             if (directVideoUrl != null) {
                 println("🎬 URL direta da página: $directVideoUrl")
                 
-                callback.invoke(
+                @Suppress("DEPRECATION")
+                callback(
                     ExtractorLink(
-                        this.name,
-                        this.name,
+                        name,
+                        name,
                         directVideoUrl,
                         episodeUrl,
                         Qualities.Unknown.value,

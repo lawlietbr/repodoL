@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.network.WebViewResolver
 import org.jsoup.nodes.Element
-import kotlinx.coroutines.delay  // ← IMPORT QUE FALTAVA
+import kotlinx.coroutines.delay
 
 class UltraCine : MainAPI() {
     override var mainUrl = "https://ultracine.org"
@@ -15,9 +15,6 @@ class UltraCine : MainAPI() {
     override var lang = "pt-br"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
-
-    private fun getUserAgent(): String =
-        "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
     override val mainPage = mainPageOf(
         "$mainUrl/category/lancamentos/" to "Lançamentos",
@@ -79,8 +76,7 @@ class UltraCine : MainAPI() {
                 ?.takeIf { it.isNotBlank() }
                 ?.let { fixUrl(it).replace("/w1280/", "/original/") }
 
-        val yearText = document.selectFirst("aside.fg1 header.entry-header div.entry-meta span.year")?.ownText()
-        val year = yearText?.toIntOrNull()
+        val year = document.selectFirst("aside.fg1 header.entry-header div.entry-meta span.year")?.ownText()?.toIntOrNull()
         val durationText = document.selectFirst("aside.fg1 header.entry-header div.entry-meta span.duration")?.ownText()
         val plot = document.selectFirst("aside.fg1 div.description p")?.text()
         val tags = document.select("aside.fg1 header.entry-header div.entry-meta span.genres a").map { it.text() }
@@ -125,7 +121,8 @@ class UltraCine : MainAPI() {
             val seasonNum = seasonEl.attr("data-season-number").toIntOrNull() ?: return@forEach
             val seasonId = seasonEl.attr("data-season-id")
             doc.select("li[data-season-id='$seasonId']").mapNotNull { epEl ->
-                val epId = epEl.attr("data-episode-id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val epId = epEl.attr("data-episode-id")
+                if (epId.isBlank()) return@mapNotNull null
                 val title = epEl.selectFirst("a")?.text() ?: "Episódio"
                 val epNum = title.substringBefore(" - ").toIntOrNull() ?: 1
                 newEpisode(epId) {
@@ -171,21 +168,21 @@ class UltraCine : MainAPI() {
         val isEpisode = data.matches(Regex("^\\d+$"))
 
         try {
-            val res = app.get(finalUrl, referer = mainUrl, headers = mapOf("User-Agent" to getUserAgent()))
+            val res = app.get(finalUrl, referer = mainUrl)
             val html = res.text
 
+            // EPISÓDIOS: WEBVIEW PRIMEIRO (pra pular ads e ativar JW Player)
             if (isEpisode) {
-                // WEBVIEW OBRIGATÓRIO PARA EPISÓDIOS
                 WebViewResolver(res.text).resolveUsingWebView(res.url) { link ->
-                    if (link.isNotBlank() &&
+                    if (link.isNotBlank() && 
                         (link.contains(".mp4") || link.contains(".m3u8") || link.contains("googlevideo.com")) &&
                         !link.contains("banner") && !link.contains("ads")
                     ) {
                         val quality = when {
-                            link.contains("360p") || link.contains("/360/") -> Qualities.P360.value
-                            link.contains("480p") || link.contains("/480/") -> Qualities.P480.value
-                            link.contains("720p") || link.contains("/720/") -> Qualities.P720.value
-                            link.contains("1080p") || link.contains("/1080/") -> Qualities.P1080.value
+                            link.contains("360p") -> 360
+                            link.contains("480p") -> 480
+                            link.contains("720p") -> 720
+                            link.contains("1080p") -> 1080
                             else -> Qualities.Unknown.value
                         }
 
@@ -201,42 +198,41 @@ class UltraCine : MainAPI() {
                         )
                     }
                 }
-
-                // Dá tempo pro WebView pular anúncio e clicar play
-                delay(9000)
-                return true // CloudStream espera o WebView
+                delay(10000) // Tempo pra WebView simular skip ad + play/pause
+                return true // Deixa o CloudStream esperar o WebView
             }
 
-            // FILMES: tenta regex rápido (funciona na maioria)
-            val jwPattern = Regex("""<video[^>]+class=["'][^"']*jw[^"']*["'][^>]+src=["'](https?://[^"']+\.mp4[^"']*)["']""")
-            jwPattern.find(html)?.groupValues?.get(1)?.let { url ->
-                if (!url.contains("banner") && !url.contains("ads")) {
-                    val quality = when {
-                        url.contains("360p") -> Qualities.P360.value
-                        url.contains("480p") -> Qualities.P480.value
-                        url.contains("720p") -> Qualities.P720.value
-                        url.contains("1080p") -> Qualities.P1080.value
-                        else -> Qualities.Unknown.value
+            // FILMES: REGEX RÁPIDO (mantém o que já funciona)
+            // JW Player
+            Regex("""<video[^>]+class=["'][^"']*jw[^"']*["'][^>]+src=["'](https?://[^"']+\.mp4[^"']*)["']""")
+                .find(html)?.groupValues?.get(1)?.let { url ->
+                    if (!url.contains("banner") && !url.contains("ads")) {
+                        val quality = when {
+                            url.contains("360p") -> 360
+                            url.contains("480p") -> 480
+                            url.contains("720p") -> 720
+                            url.contains("1080p") -> 1080
+                            else -> Qualities.Unknown.value
+                        }
+                        callback.invoke(
+                            ExtractorLink(name, "\( name ( \){quality}p)", url, finalUrl, quality, false)
+                        )
+                        return true
                     }
-                    callback.invoke(
-                        ExtractorLink(name, "\( name ( \){quality}p)", url, finalUrl, quality, isM3u8 = false)
-                    )
-                    return true
                 }
-            }
 
-            // Fallback genérico MP4
+            // MP4 genérico
             Regex("""(https?://[^"']+\.mp4[^"']*)""").findAll(html).forEach { match ->
                 val url = match.value
                 if (url.length > 50 && !url.contains("banner") && !url.contains("ads")) {
                     callback.invoke(
-                        ExtractorLink(name, name, url, finalUrl, Qualities.Unknown.value, isM3u8 = false)
+                        ExtractorLink(name, name, url, finalUrl, Qualities.Unknown.value, false)
                     )
                     return true
                 }
             }
 
-            // Iframes antigos (EmbedPlay)
+            // Iframes (EmbedPlay antigo)
             res.document.select("iframe").forEach { iframe ->
                 val src = iframe.attr("src")
                 if (src.isNotBlank() && loadExtractor(src, finalUrl, subtitleCallback, callback)) return true
@@ -245,7 +241,7 @@ class UltraCine : MainAPI() {
             return false
         } catch (e: Exception) {
             e.printStackTrace()
-            return isEpisode // Episódios retornam true mesmo com erro (WebView ainda tenta)
+            return isEpisode // Episódios sempre tentam WebView
         }
     }
 }

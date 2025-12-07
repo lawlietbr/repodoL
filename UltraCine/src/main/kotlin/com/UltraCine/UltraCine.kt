@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import kotlinx.coroutines.delay
 import org.jsoup.nodes.Element
 
+@Suppress("DEPRECATION")
 class UltraCine : MainAPI() {
     override var mainUrl = "https://ultracine.org"
     override var name = "UltraCine"
@@ -343,7 +344,6 @@ class UltraCine : MainAPI() {
                             videoUrl.contains("googlevideo")) {
                             println("🎬 URL de vídeo em script: $videoUrl")
                             
-                            @Suppress("DEPRECATION")
                             callback(
                                 ExtractorLink(
                                     name,
@@ -379,7 +379,6 @@ class UltraCine : MainAPI() {
             if (videoUrl != null) {
                 println("🎬 URL direta encontrada: $videoUrl")
                 
-                @Suppress("DEPRECATION")
                 callback(
                     ExtractorLink(
                         name,
@@ -453,7 +452,6 @@ class UltraCine : MainAPI() {
                 if (videoUrl != null) {
                     println("🎬 URL encontrada na API: $videoUrl")
                     
-                    @Suppress("DEPRECATION")
                     callback(
                         ExtractorLink(
                             name,
@@ -513,7 +511,6 @@ class UltraCine : MainAPI() {
                     if (videoUrl != null) {
                         println("🎬 URL do player: $videoUrl")
                         
-                        @Suppress("DEPRECATION")
                         callback(
                             ExtractorLink(
                                 name,
@@ -534,7 +531,6 @@ class UltraCine : MainAPI() {
             if (directVideoUrl != null) {
                 println("🎬 URL direta da página: $directVideoUrl")
                 
-                @Suppress("DEPRECATION")
                 callback(
                     ExtractorLink(
                         name,

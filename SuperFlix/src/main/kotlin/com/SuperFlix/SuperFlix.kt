@@ -60,12 +60,13 @@ class SuperFlix : MainAPI() {
 
     // 1. name, hasMainPage, lang, supportedTypes - JÁ FEITO ACIMA
 
-    // 2. mainPage (categorias)
+     // 2. mainPage (categorias)
     override val mainPage = listOf(
         MainPageData("Lançamentos", "$mainUrl/lancamentos"),
         MainPageData("Últimos Filmes", "$mainUrl/filmes"),
         MainPageData("Últimas Séries", "$mainUrl/series"),
-        MainPageData("Últimos Animes", "$mainUrl/animes"),
+        MainPageData("Últimos Animes", "$mainUrl/animes") // Falta a vírgula aqui se houver mais itens
+    ) // <-- ADICIONADO: Fechamento da lista e do bloco de código
 
     // 3. getMainPage()
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {

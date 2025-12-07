@@ -137,23 +137,25 @@ override suspend fun search(query: String): List<SearchResponse> {
         val plot = document.selectFirst(".syn")?.text()?.trim()
             ?: "Sinopse não encontrada."
         
-        // 3. TAGS/GÊNEROS (Seleção direta pela classe .chip)
-        val tags = document.select("a.chip").map { it.text().trim() }.filter { it.isNotEmpty() }
+       // 3. TAGS/GÊNEROS (Seleção direta pela classe .chip)
+val tags = document.select("a.chip").map { it.text().trim() }.filter { it.isNotEmpty() }
 
-        // 4. ELENCO (ATORES): Estratégia de EXCLUSÃO
-        
-        // A) Pega TODOS os links dentro de DIVs (Inclui Atores e potencialmente outros)
-        val allDivLinks = document.select("div a").map { it.text().trim() }
-        
-        // B) Pega TODOS os links que são Tags (a.chip)
-        val chipTexts = tags.toSet() 
+// 4. ELENCO (ATORES): Estratégia de EXCLUSÃO REFORÇADA
 
-        // C) ATORES: Filtra a lista A, removendo tudo que está na lista B
-        // Usamos um filtro de tamanho para eliminar links vazios ou de 1 letra
-        val actors = allDivLinks
-            .filter { linkText -> linkText !in chipTexts } // Remove todos os textos que são tags
-            .filter { it.isNotEmpty() && it.length > 2 }   // Remove ruídos
-            .distinct() // Remove duplicatas
+// A) Pega TODOS os links dentro de DIVs que estão no CONTEÚDO PRINCIPAL (para reduzir o ruído)
+val allDivLinks = document.select("div a").map { it.text().trim() }
+    
+// B) Pega TODOS os textos de TAGS/GÊNEROS que já estão corretos.
+val chipTexts = tags.toSet() 
+
+// C) ATORES: Filtra a lista A, removendo TUDO que está na lista B.
+// Usamos um filtro de tamanho para eliminar links de direção ou ruído.
+val actors = allDivLinks
+    .filter { linkText -> linkText !in chipTexts } // Remove tags
+    .filter { it.isNotEmpty() && it.length > 2 }   // Remove ruídos
+    .distinct() 
+    .take(15) // Limita a lista aos 15 primeiros (para evitar pegar listas longas e incorretas)
+    .toList() // Finaliza a lista de atores
 
         // Outros campos
         val year = title.substringAfterLast("(").substringBeforeLast(")").toIntOrNull()

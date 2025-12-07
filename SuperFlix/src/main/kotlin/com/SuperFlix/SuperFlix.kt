@@ -1,14 +1,15 @@
-package com.SuperFlix21
+package com.SuperFlix
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import org.jsoup.nodes.Element
+import java.net.URLEncoder
 
-class SuperFlix21 : MainAPI() {
+class SuperFlix : MainAPI() {
     override var mainUrl = "https://superflix21.lol"
-    override var name = "SuperFlix21"
+    override var name = "SuperFlix"
     override val hasMainPage = true
     override var lang = "pt-br"
     override val hasDownloadSupport = true
@@ -24,18 +25,20 @@ class SuperFlix21 : MainAPI() {
         val url = request.data + if (page > 1) "?page=$page" else ""
         val document = app.get(url).document
         
-        // 🔥 NOVO: USAR A ESTRUTURA DOS RECOMENDADOS QUE VOCÊ ENCONTROU
-        val home = document.select("div.recs-grid a.rec-card, .movie-card, article").mapNotNull {
-            it.toSearchResult()
+        val home = mutableListOf<SearchResponse>()
+        
+        // PRIMEIRA TENTATIVA: estrutura dos recomendados
+        document.select("div.recs-grid a.rec-card, .movie-card, article, .item").forEach { element ->
+            element.toSearchResult()?.let { home.add(it) }
         }
         
-        // Se não encontrar, tentar pegar TODOS os links de filmes/séries
+        // SEGUNDA TENTATIVA: todos os links de filmes/séries
         if (home.isEmpty()) {
             document.select("a[href*='/filme/'], a[href*='/serie/']").forEach { link ->
                 val href = link.attr("href")
                 if (href.isNotBlank() && !href.contains("#")) {
                     val title = link.selectFirst("img")?.attr("alt")
-                        ?: link.selectFirst(".rec-title, .title, h2, h3")?.text()
+                        ?: link.selectFirst(".rec-title, .title, h2, h3, .movie-title")?.text()
                         ?: href.substringAfterLast("/").replace("-", " ").replace(Regex("\\d{4}$"), "").trim()
                     
                     if (title.isNotBlank()) {
@@ -44,27 +47,30 @@ class SuperFlix21 : MainAPI() {
                         val poster = link.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
                         val isSerie = href.contains("/serie/")
                         
-                        if (isSerie) {
-                            home.add(newTvSeriesSearchResponse(cleanTitle, fixUrl(href), TvType.TvSeries) {
+                        val searchResponse = if (isSerie) {
+                            newTvSeriesSearchResponse(cleanTitle, fixUrl(href), TvType.TvSeries) {
                                 this.posterUrl = poster
                                 this.year = year
-                            })
+                            }
                         } else {
-                            home.add(newMovieSearchResponse(cleanTitle, fixUrl(href), TvType.Movie) {
+                            newMovieSearchResponse(cleanTitle, fixUrl(href), TvType.Movie) {
                                 this.posterUrl = poster
                                 this.year = year
-                            })
+                            }
                         }
+                        
+                        home.add(searchResponse)
                     }
                 }
             }
         }
         
-        return newHomePageResponse(request.name, home.distinctBy { it.url })
+        // Remover duplicados
+        val uniqueHome = home.distinctBy { it.url }
+        return newHomePageResponse(request.name, uniqueHome)
     }
 
     private fun Element.toSearchResult(): SearchResponse? {
-        // Baseado na estrutura que você encontrou
         val title = selectFirst(".rec-title, .movie-title, h2, h3, .title")?.text()
             ?: selectFirst("img")?.attr("alt")
             ?: return null
@@ -98,13 +104,15 @@ class SuperFlix21 : MainAPI() {
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val document = app.get("$mainUrl/?s=${query.encodeUrl()}").document
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
+        val document = app.get("$mainUrl/?s=$encodedQuery").document
         
-        // Usar a mesma lógica da página inicial
         val results = mutableListOf<SearchResponse>()
         
         // Primeiro: estrutura dos recomendados
-        results.addAll(document.select("div.recs-grid a.rec-card").mapNotNull { it.toSearchResult() })
+        document.select("div.recs-grid a.rec-card").forEach { element ->
+            element.toSearchResult()?.let { results.add(it) }
+        }
         
         // Segundo: qualquer link de filme/série
         if (results.isEmpty()) {
@@ -120,17 +128,19 @@ class SuperFlix21 : MainAPI() {
                     val poster = link.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
                     val isSerie = href.contains("/serie/")
                     
-                    if (isSerie) {
-                        results.add(newTvSeriesSearchResponse(cleanTitle, fixUrl(href), TvType.TvSeries) {
+                    val searchResponse = if (isSerie) {
+                        newTvSeriesSearchResponse(cleanTitle, fixUrl(href), TvType.TvSeries) {
                             this.posterUrl = poster
                             this.year = year
-                        })
+                        }
                     } else {
-                        results.add(newMovieSearchResponse(cleanTitle, fixUrl(href), TvType.Movie) {
+                        newMovieSearchResponse(cleanTitle, fixUrl(href), TvType.Movie) {
                             this.posterUrl = poster
                             this.year = year
-                        })
+                        }
                     }
+                    
+                    results.add(searchResponse)
                 }
             }
         }
@@ -142,7 +152,7 @@ class SuperFlix21 : MainAPI() {
         val document = app.get(url).document
         val html = document.html()
 
-        // 🔥 EXTRAIR DADOS DO JSON-LD (MELHOR MÉTODO)
+        // Extrair dados do JSON-LD
         val jsonLd = extractJsonLd(html)
         
         val title = jsonLd.title ?: document.selectFirst("h1, .title")?.text() ?: return null
@@ -166,7 +176,7 @@ class SuperFlix21 : MainAPI() {
         // Diretor
         val director = jsonLd.director?.firstOrNull()
         
-        // 🔥 ENCONTRAR IFRAME DO FEMBED
+        // Encontrar iframe do Fembed
         val iframe = document.selectFirst("iframe[src*='fembed']")
         val fembedUrl = iframe?.attr("src")
         
@@ -206,7 +216,7 @@ class SuperFlix21 : MainAPI() {
         }
     }
 
-    // 🔥 FUNÇÃO PARA EXTRAIR JSON-LD
+    // Função para extrair JSON-LD
     private data class JsonLdInfo(
         val title: String? = null,
         val year: Int? = null,
@@ -273,7 +283,7 @@ class SuperFlix21 : MainAPI() {
                     
                     return JsonLdInfo(
                         title = title,
-                        year = null, // Vai extrair do título depois
+                        year = null,
                         posterUrl = image,
                         description = description,
                         genres = genres,

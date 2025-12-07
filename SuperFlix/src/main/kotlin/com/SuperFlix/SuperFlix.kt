@@ -106,81 +106,28 @@ class SuperFlix : MainAPI() {
     return results
 }
 
-    override suspend fun load(url: String): LoadResponse {
-        val response = app.get(url, headers = defaultHeaders) 
-        val document = response.document
+    // DENTRO DA FUNÇÃO load(url: String)
 
-        val isMovie = url.contains("/filme/")
+// ... (Outras extrações)
 
-        // 1. TÍTULO
-        val dynamicTitle = document.selectFirst(".title")?.text()?.trim()
-        val title: String
+// 3. TAGS/GÊNEROS (Seleção direta pela classe .chip)
+val tags = document.select("a.chip").map { it.text().trim() }.filter { it.isNotEmpty() }
 
-        if (dynamicTitle.isNullOrEmpty()) {
-            val fullTitle = document.selectFirst("title")?.text()?.trim()
-                ?: throw ErrorLoadingException("Não foi possível extrair a tag <title>.")
+// 4. ELENCO (ATORES): Estratégia de EXCLUSÃO REFORÇADA
+val allDivLinks = document.select("div a").map { it.text().trim() }
+val chipTexts = tags.toSet() 
 
-            title = fullTitle.substringAfter("Assistir").substringBefore("Grátis").trim()
-                .ifEmpty { fullTitle.substringBefore("Grátis").trim() } 
-        } else {
-            title = dynamicTitle
-        }
+// Atores = Todos os links de DIVs - Links que são Tags
+val actors = allDivLinks
+    .filter { linkText -> linkText !in chipTexts } // Remove tags
+    .filter { linkText -> !linkText.contains("Assista sem anúncios") } // Remove propaganda
+    .filter { it.isNotEmpty() && it.length > 2 }   // Remove ruídos
+    .distinct() 
+    .take(15) // Limita a lista de atores para segurança
+    .toList()
 
-        // 2. POSTER e SINOPSE
-        val posterUrl = document.selectFirst(".poster img")?.attr("src")?.let { fixUrl(it) }
-            ?: document.selectFirst(".poster")?.attr("src")?.let { fixUrl(it) }
+// ... (O restante do código permanece o mesmo)
 
-        val plot = document.selectFirst(".syn")?.text()?.trim()
-            ?: "Sinopse não encontrada."
-
-        // 3. TAGS/GÊNEROS
-        val tags = document.select("a.chip").map { it.text().trim() }.filter { it.isNotEmpty() }
-
-        // 4. ELENCO (ATORES): Usando a Estratégia de Exclusão (que compilava)
-        val allDivLinks = document.select("div a").map { it.text().trim() }
-        val chipTexts = tags.toSet() 
-
-        val actors = allDivLinks
-            .filter { linkText -> linkText !in chipTexts }
-            .filter { linkText -> !linkText.contains("Assista sem anúncios") }
-            .filter { it.isNotEmpty() && it.length > 2 }
-            .distinct() 
-            .take(15) 
-            .toList()
-
-        // Outros campos
-        val year = title.substringAfterLast("(").substringBeforeLast(")").toIntOrNull()
-
-        val type = if (isMovie) TvType.Movie else TvType.TvSeries
-
-        return if (isMovie) {
-            val embedUrl = getFembedUrl(document)
-            newMovieLoadResponse(title, url, type, embedUrl) {
-                this.posterUrl = posterUrl
-                this.plot = plot
-                this.tags = tags
-                this.year = year
-                addActors(actors)
-            }
-        } else {
-            val seasons = document.select("div#season-tabs button").mapIndexed { index, element ->
-                val seasonName = element.text().trim()
-                newEpisode(url) {
-                    name = seasonName
-                    season = index + 1
-                    episode = 1 
-                    data = url 
-                }
-            }
-            newTvSeriesLoadResponse(title, url, type, seasons) { 
-                this.posterUrl = posterUrl
-                this.plot = plot
-                this.tags = tags
-                this.year = year
-                addActors(actors)
-            }
-        }
-    }
 
 
     override suspend fun loadLinks(

@@ -91,7 +91,7 @@ class SuperFlix : MainAPI() {
     // CORREÇÃO: Tenta o URL de pesquisa com a barra garantida
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/?s=$query"
-        val response = app.get(url, headers = defaultHeaders)
+        val response = app.get(url, isBrowser = true) 
         val document = response.document
 
         // O erro "did not return any search responses" acontece aqui se o documento

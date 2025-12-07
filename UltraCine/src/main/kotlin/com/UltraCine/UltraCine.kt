@@ -343,11 +343,11 @@ class UltraCine : MainAPI() {
                             videoUrl.contains("googlevideo")) {
                             println("🎬 URL de vídeo em script: $videoUrl")
                             
-                            // CORREÇÃO: Usando ExtractorLink() diretamente
-                            callback(
+                            // USANDO A FUNÇÃO CORRETA PARA CRIAR ExtractorLink
+                            callback.invoke(
                                 ExtractorLink(
-                                    name,
-                                    name,
+                                    this.name,
+                                    this.name,
                                     videoUrl,
                                     iframeUrl,
                                     Qualities.Unknown.value,
@@ -378,10 +378,11 @@ class UltraCine : MainAPI() {
             val videoUrl = extractDirectVideoUrl(doc)
             if (videoUrl != null) {
                 println("🎬 URL direta encontrada: $videoUrl")
-                callback(
+                
+                callback.invoke(
                     ExtractorLink(
-                        name,
-                        name,
+                        this.name,
+                        this.name,
                         videoUrl,
                         iframeUrl,
                         Qualities.Unknown.value,
@@ -451,11 +452,10 @@ class UltraCine : MainAPI() {
                 if (videoUrl != null) {
                     println("🎬 URL encontrada na API: $videoUrl")
                     
-                    // CORREÇÃO: Usando ExtractorLink() diretamente
-                    callback(
+                    callback.invoke(
                         ExtractorLink(
-                            name,
-                            name,
+                            this.name,
+                            this.name,
                             videoUrl,
                             apiUrl,
                             Qualities.Unknown.value,
@@ -511,11 +511,10 @@ class UltraCine : MainAPI() {
                     if (videoUrl != null) {
                         println("🎬 URL do player: $videoUrl")
                         
-                        // CORREÇÃO: Usando ExtractorLink() diretamente
-                        callback(
+                        callback.invoke(
                             ExtractorLink(
-                                name,
-                                name,
+                                this.name,
+                                this.name,
                                 videoUrl,
                                 episodeUrl,
                                 Qualities.Unknown.value,
@@ -531,10 +530,11 @@ class UltraCine : MainAPI() {
             val directVideoUrl = extractDirectVideoUrl(doc)
             if (directVideoUrl != null) {
                 println("🎬 URL direta da página: $directVideoUrl")
-                callback(
+                
+                callback.invoke(
                     ExtractorLink(
-                        name,
-                        name,
+                        this.name,
+                        this.name,
                         directVideoUrl,
                         episodeUrl,
                         Qualities.Unknown.value,

@@ -3,9 +3,11 @@
 package com.UltraCine
 
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import org.jsoup.nodes.Element
 
 class UltraCine : MainAPI() {
@@ -331,32 +333,17 @@ class UltraCine : MainAPI() {
                             videoUrl.contains("googlevideo")) {
                             println("🎬 URL de vídeo em script: $videoUrl")
                             
-                            // Tentando a nova API primeiro
-                            try {
-                                val link = ExtractorLink.newExtractorLink(
-                                    this.name,
-                                    this.name,
-                                    videoUrl,
-                                    iframeUrl,
-                                    Qualities.Unknown.value,
-                                    videoUrl.contains(".m3u8")
-                                )
-                                callback(link)
-                                return true
-                            } catch (e: Exception) {
-                                // Fallback para a API antiga
-                                @Suppress("DEPRECATION")
-                                val fallbackLink = ExtractorLink(
-                                    this.name,
-                                    this.name,
-                                    videoUrl,
-                                    iframeUrl,
-                                    Qualities.Unknown.value,
-                                    videoUrl.contains(".m3u8")
-                                )
-                                callback(fallbackLink)
-                                return true
-                            }
+                            // Criando ExtractorLink da forma correta
+                            val link = ExtractorLink(
+                                source = name,
+                                name = name,
+                                url = videoUrl,
+                                referer = iframeUrl,
+                                quality = Qualities.Unknown.value,
+                                type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                            )
+                            callback(link)
+                            return true
                         }
                     }
                 }
@@ -379,32 +366,16 @@ class UltraCine : MainAPI() {
             if (videoUrl != null) {
                 println("🎬 URL direta encontrada: $videoUrl")
                 
-                // Tentando a nova API primeiro
-                try {
-                    val link = ExtractorLink.newExtractorLink(
-                        this.name,
-                        this.name,
-                        videoUrl,
-                        iframeUrl,
-                        Qualities.Unknown.value,
-                        videoUrl.contains(".m3u8")
-                    )
-                    callback(link)
-                    return true
-                } catch (e: Exception) {
-                    // Fallback para a API antiga
-                    @Suppress("DEPRECATION")
-                    val fallbackLink = ExtractorLink(
-                        this.name,
-                        this.name,
-                        videoUrl,
-                        iframeUrl,
-                        Qualities.Unknown.value,
-                        videoUrl.contains(".m3u8")
-                    )
-                    callback(fallbackLink)
-                    return true
-                }
+                val link = ExtractorLink(
+                    source = name,
+                    name = name,
+                    url = videoUrl,
+                    referer = iframeUrl,
+                    quality = Qualities.Unknown.value,
+                    type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                )
+                callback(link)
+                return true
             }
             
             false
@@ -464,32 +435,16 @@ class UltraCine : MainAPI() {
                 if (videoUrl != null) {
                     println("🎬 URL encontrada na API: $videoUrl")
                     
-                    // Tentando a nova API primeiro
-                    try {
-                        val link = ExtractorLink.newExtractorLink(
-                            this.name,
-                            this.name,
-                            videoUrl,
-                            apiUrl,
-                            Qualities.Unknown.value,
-                            videoUrl.contains(".m3u8")
-                        )
-                        callback(link)
-                        return true
-                    } catch (e: Exception) {
-                        // Fallback para a API antiga
-                        @Suppress("DEPRECATION")
-                        val fallbackLink = ExtractorLink(
-                            this.name,
-                            this.name,
-                            videoUrl,
-                            apiUrl,
-                            Qualities.Unknown.value,
-                            videoUrl.contains(".m3u8")
-                        )
-                        callback(fallbackLink)
-                        return true
-                    }
+                    val link = ExtractorLink(
+                        source = name,
+                        name = name,
+                        url = videoUrl,
+                        referer = apiUrl,
+                        quality = Qualities.Unknown.value,
+                        type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                    )
+                    callback(link)
+                    return true
                 }
                 
                 val iframePattern = Regex("""<iframe[^>]+src=['"](https?://[^"']+)['"]""")
@@ -534,32 +489,16 @@ class UltraCine : MainAPI() {
                     if (videoUrl != null) {
                         println("🎬 URL do player: $videoUrl")
                         
-                        // Tentando a nova API primeiro
-                        try {
-                            val link = ExtractorLink.newExtractorLink(
-                                this.name,
-                                this.name,
-                                videoUrl,
-                                episodeUrl,
-                                Qualities.Unknown.value,
-                                videoUrl.contains(".m3u8")
-                            )
-                            callback(link)
-                            return true
-                        } catch (e: Exception) {
-                            // Fallback para a API antiga
-                            @Suppress("DEPRECATION")
-                            val fallbackLink = ExtractorLink(
-                                this.name,
-                                this.name,
-                                videoUrl,
-                                episodeUrl,
-                                Qualities.Unknown.value,
-                                videoUrl.contains(".m3u8")
-                            )
-                            callback(fallbackLink)
-                            return true
-                        }
+                        val link = ExtractorLink(
+                            source = name,
+                            name = name,
+                            url = videoUrl,
+                            referer = episodeUrl,
+                            quality = Qualities.Unknown.value,
+                            type = if (videoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                        )
+                        callback(link)
+                        return true
                     }
                 }
             }
@@ -568,32 +507,16 @@ class UltraCine : MainAPI() {
             if (directVideoUrl != null) {
                 println("🎬 URL direta da página: $directVideoUrl")
                 
-                // Tentando a nova API primeiro
-                try {
-                    val link = ExtractorLink.newExtractorLink(
-                        this.name,
-                        this.name,
-                        directVideoUrl,
-                        episodeUrl,
-                        Qualities.Unknown.value,
-                        directVideoUrl.contains(".m3u8")
-                    )
-                    callback(link)
-                    return true
-                } catch (e: Exception) {
-                    // Fallback para a API antiga
-                    @Suppress("DEPRECATION")
-                    val fallbackLink = ExtractorLink(
-                        this.name,
-                        this.name,
-                        directVideoUrl,
-                        episodeUrl,
-                        Qualities.Unknown.value,
-                        directVideoUrl.contains(".m3u8")
-                    )
-                    callback(fallbackLink)
-                    return true
-                }
+                val link = ExtractorLink(
+                    source = name,
+                    name = name,
+                    url = directVideoUrl,
+                    referer = episodeUrl,
+                    quality = Qualities.Unknown.value,
+                    type = if (directVideoUrl.contains(".m3u8")) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+                )
+                callback(link)
+                return true
             }
             
             false

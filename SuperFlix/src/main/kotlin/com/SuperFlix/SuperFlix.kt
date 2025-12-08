@@ -241,7 +241,6 @@ class SuperFlix : MainAPI() {
         println("SuperFlix: ID do vídeo: $videoId")
         
         return try {
-            // Abordagem FINAL: Simular exatamente o fluxo do player
             simulatePlayerFlow(videoId, callback)
         } catch (e: Exception) {
             println("SuperFlix: ERRO - ${e.message}")
@@ -259,7 +258,6 @@ class SuperFlix : MainAPI() {
         val baseUrl = "https://fembed.sx"
         val apiUrl = "$baseUrl/api.php?s=$videoId&c="
         
-        // Headers para simular o player real
         val headers = mapOf(
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept" to "application/json, text/plain, */*",
@@ -270,13 +268,12 @@ class SuperFlix : MainAPI() {
             "Content-Type" to "application/x-www-form-urlencoded; charset=UTF-8"
         )
         
-        // PASSO 1: Obter dados do vídeo da API
         println("SuperFlix: PASSO 1 - Obtendo dados da API...")
         
         val postData = mapOf(
             "action" to "getPlayer",
-            "lang" to "DUB",  // Tenta Dublado primeiro
-            "key" to Base64.getEncoder().encodeToString("0".toByteArray()) // "MA=="
+            "lang" to "DUB",
+            "key" to Base64.getEncoder().encodeToString("0".toByteArray())
         )
         
         val apiResponse = try {
@@ -292,13 +289,9 @@ class SuperFlix : MainAPI() {
         }
         
         val apiText = apiResponse.text
-        println("SuperFlix: Resposta API (${apiText.length} chars)")
+        println("SuperFlix: Resposta API (${apiText.length} chars): ${apiText.take(200)}...")
         
-        // PASSO 2: Analisar a resposta para extrair parâmetros do m3u8
         println("SuperFlix: PASSO 2 - Analisando resposta...")
-        
-        // O Fembed geralmente retorna um objeto com parâmetros como:
-        // file: "https://.../master.m3u8?t=...&s=...&e=...&f=...&srv=...&asn=...&sp=..."
         
         val m3u8Url = extractM3u8FromApiResponse(apiText)
         if (m3u8Url != null) {
@@ -306,10 +299,8 @@ class SuperFlix : MainAPI() {
             return createExtractorLink(m3u8Url, "Dublado", baseUrl, callback)
         }
         
-        // Se não encontrou, tentar construir a URL com padrões conhecidos
         println("SuperFlix: Construindo URL com padrões...")
         
-        // Extrair parâmetros da resposta
         val params = extractStreamParams(apiText)
         
         if (params.isNotEmpty()) {
@@ -320,7 +311,6 @@ class SuperFlix : MainAPI() {
             }
         }
         
-        // Última tentativa: Tentar Legendado
         println("SuperFlix: Tentando Legendado...")
         val subPostData = mapOf(
             "action" to "getPlayer",
@@ -344,13 +334,9 @@ class SuperFlix : MainAPI() {
     }
 
     private fun extractM3u8FromApiResponse(responseText: String): String? {
-        // Tentar várias abordagens para extrair a URL
-        
-        // 1. Verificar se é JSON com URL
         try {
             val json = app.parseJson<Map<String, Any>>(responseText)
             
-            // Verificar campos comuns
             val possibleFields = listOf("file", "url", "src", "source", "hls", "m3u8", "playlist", "stream", "video")
             
             for (field in possibleFields) {
@@ -360,8 +346,7 @@ class SuperFlix : MainAPI() {
                 }
             }
             
-            // Verificar se há URL codificada
-            for ((key, value) in json) {
+            for ((key, value) in json.entries) {
                 if (value is String && value.contains("http") && value.contains(".m3u8")) {
                     return fixUrl(value)
                 }
@@ -370,7 +355,6 @@ class SuperFlix : MainAPI() {
             // Não é JSON válido, continuar
         }
         
-        // 2. Procurar por padrões de URL m3u8 no texto
         val patterns = listOf(
             Regex("""https?://[^"'\s]+\.m3u8[^"'\s]*"""),
             Regex("""["'](https?://[^"']+\.m3u8[^"']*)["']"""),
@@ -383,15 +367,12 @@ class SuperFlix : MainAPI() {
             matches.forEach { match ->
                 var url = if (match.groupValues.size > 1) match.groupValues[1] else match.value
                 
-                // Se for URL relativa
                 if (url.startsWith("/")) {
                     url = "https://fembed.sx$url"
                 } else if (url.startsWith("hls2/")) {
-                    // Adicionar domínio base (pode variar)
                     url = "https://be6721.rcr72.waw04.i8yz83pn.com/$url"
                 }
                 
-                // Verificar se é uma URL completa
                 if (url.startsWith("http") && url.contains(".m3u8")) {
                     println("SuperFlix: Encontrado via padrão: $url")
                     return url
@@ -405,7 +386,6 @@ class SuperFlix : MainAPI() {
     private fun extractStreamParams(responseText: String): Map<String, String> {
         val params = mutableMapOf<String, String>()
         
-        // Padrões baseados nas suas imagens
         val paramPatterns = mapOf(
             "t" to Regex("""t=([^&"'\s]+)"""),
             "s" to Regex("""s=(\d+)"""),
@@ -419,7 +399,6 @@ class SuperFlix : MainAPI() {
             "path1" to Regex("""hls2/(\d+)/(\d+)""")
         )
         
-        // Procurar parâmetros no texto
         paramPatterns.forEach { (key, pattern) ->
             val matches = pattern.findAll(responseText)
             matches.forEach { match ->
@@ -444,7 +423,6 @@ class SuperFlix : MainAPI() {
             }
         }
         
-        // Valores padrão baseados nas suas imagens
         if (!params.containsKey("t")) params["t"] = "0oy5UBzU4ee3_2k_o0hqL6xJb_0x8YqlZR4n6PvCU"
         if (!params.containsKey("s")) params["s"] = "1765199884"
         if (!params.containsKey("e")) params["e"] = "10800"
@@ -462,8 +440,7 @@ class SuperFlix : MainAPI() {
     }
 
     private fun buildM3u8Url(params: Map<String, String>): String? {
-        // Construir URL baseada no padrão exato das suas imagens
-        val domain = "be6721.rcr72.waw04.i8yz83pn.com" // Domínio pode variar
+        val domain = "be6721.rcr72.waw04.i8yz83pn.com"
         
         val pathNum1 = params["path_num1"] ?: "03"
         val pathNum2 = params["path_num2"] ?: "10382"
@@ -478,11 +455,10 @@ class SuperFlix : MainAPI() {
         val sp = params["sp"] ?: return null
         val p = params["p"] ?: "GET"
         
-        // Construir no formato exato da imagem
         return "https://$domain/hls2/$pathNum1/$pathNum2/${hash}_h/master.m3u8?t=$t&s=$s&e=$e&f=$f&srv=$srv&asn=$asn&sp=$sp&p=$p"
     }
 
-    private fun createExtractorLink(
+    private suspend fun createExtractorLink(
         url: String,
         language: String,
         referer: String,
@@ -490,16 +466,15 @@ class SuperFlix : MainAPI() {
     ): Boolean {
         val quality = determineQualityFromUrl(url)
         
-        callback(
-            newExtractorLink(
-                name = "$name ($language)",
-                url = url,
-                sourceUrl = referer,
-                quality = quality,
-                isM3u8 = true,
-                referer = referer
-            )
-        )
+        val extractorLink = newExtractorLink {
+            this.name = "$name ($language)"
+            this.url = url
+            this.referer = referer
+            this.quality = quality
+            this.isM3u8 = true
+        }
+        
+        callback(extractorLink)
         
         println("SuperFlix: Link adicionado - $language ($quality)")
         return true

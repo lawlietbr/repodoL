@@ -56,7 +56,8 @@ class Filemoon : ExtractorApi() {
             val formDataMap = mapOf(
                 "action" to "getPlayer",
                 "lang" to "DUB",
-                "key" to "MA=="
+                "key" to "MTg1ODIz" // Novo token
+
             )
 
             val requestBody = FormBody.Builder().apply {

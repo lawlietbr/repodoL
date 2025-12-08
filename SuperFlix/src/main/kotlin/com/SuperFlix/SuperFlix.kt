@@ -5,7 +5,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
-import com.lagradost.cloudstream3.utils.ExtractorLink
 
 class SuperFlix : MainAPI() {
     override var mainUrl = "https://superflix21.lol"
@@ -27,12 +26,10 @@ class SuperFlix : MainAPI() {
         
         val home = mutableListOf<SearchResponse>()
         
-        // Estrutura dos recomendados
         document.select("div.recs-grid a.rec-card, .movie-card, article, .item").forEach { element ->
             element.toSearchResult()?.let { home.add(it) }
         }
         
-        // Fallback: todos os links de filmes/séries
         if (home.isEmpty()) {
             document.select("a[href*='/filme/'], a[href*='/serie/']").forEach { link ->
                 val href = link.attr("href")
@@ -139,7 +136,6 @@ class SuperFlix : MainAPI() {
         val isSerie = url.contains("/serie/") || jsonLd.type == "TVSeries"
         
         return if (isSerie) {
-            // 🔥 AGORA: Extrair URLs do Fembed dos botões
             val episodes = extractEpisodesWithFembedLinks(document)
             
             newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
@@ -151,7 +147,6 @@ class SuperFlix : MainAPI() {
                 addActors(actors)
             }
         } else {
-            // Para filmes, extrair URL do Fembed
             val fembedUrl = extractFembedUrlFromPage(document, html)
             
             newMovieLoadResponse(title, url, TvType.Movie, fembedUrl ?: url) {
@@ -165,7 +160,6 @@ class SuperFlix : MainAPI() {
         }
     }
 
-    // 🔥 FUNÇÃO SIMPLIFICADA: Extrair episódios com URLs do Fembed
     private fun extractEpisodesWithFembedLinks(document: org.jsoup.nodes.Document): List<Episode> {
         val episodes = mutableListOf<Episode>()
         
@@ -174,7 +168,6 @@ class SuperFlix : MainAPI() {
             val season = button.attr("data-season").toIntOrNull() ?: 1
             val episodeNum = button.attr("data-ep").toIntOrNull() ?: 1
             
-            // Usar a URL do Fembed diretamente
             episodes.add(
                 newEpisode(fembedUrl) {
                     this.name = "Episódio $episodeNum"
@@ -187,21 +180,17 @@ class SuperFlix : MainAPI() {
         return episodes
     }
 
-    // 🔥 FUNÇÃO SIMPLIFICADA: Extrair URL do Fembed
     private fun extractFembedUrlFromPage(document: org.jsoup.nodes.Document, html: String): String? {
-        // 1. Botão PLAY com data-url
         val playButton = document.selectFirst("button.bd-play[data-url]")
         if (playButton != null) {
             return playButton.attr("data-url")
         }
         
-        // 2. Iframe do Fembed
         val iframe = document.selectFirst("iframe[src*='fembed']")
         if (iframe != null) {
             return iframe.attr("src")
         }
         
-        // 3. Procurar em scripts
         val patterns = listOf(
             Regex("""https?://fembed\.sx/e/\d+[^"'\s]*"""),
             Regex("""data-url=["'](https?://[^"']+fembed[^"']+)["']"""),
@@ -292,7 +281,7 @@ class SuperFlix : MainAPI() {
         return JsonLdInfo()
     }
 
-    // 🔥🔥🔥 FUNÇÃO LOADLINKS SIMPLIFICADA E FUNCIONAL 🔥🔥🔥
+    // 🔥🔥🔥 FUNÇÃO LOADLINKS CORRIGIDA 🔥🔥🔥
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -302,36 +291,35 @@ class SuperFlix : MainAPI() {
         if (data.isBlank()) return false
         
         return try {
-            // 🔥 SE JÁ FOR LINK .m3u8 DIRETO (raro, mas possível)
+            // 🔥 SE JÁ FOR LINK .m3u8 DIRETO (raro)
             if (data.contains(".m3u8") && data.contains("rcr22")) {
                 val quality = extractQualityFromUrl(data)
-                callback.invoke(
-                    ExtractorLink(
-                        source = name,
-                        name = "$name (${quality}p)",
-                        url = data,
-                        referer = mainUrl,
-                        quality = quality,
-                        isM3u8 = true
-                    )
-                )
+                val link = newExtractorLink(
+                    source = name,
+                    name = "$name (${quality}p)",
+                    url = data
+                ) {
+                    this.referer = mainUrl
+                    this.quality = quality
+                    this.isM3u8 = true
+                }
+                callback.invoke(link)
                 return true
             }
             
             // 🔥🔥🔥 SOLUÇÃO PRINCIPAL: SE FOR URL DO FEMBED 🔥🔥🔥
             if (data.contains("fembed.sx")) {
-                // DELEGA para o extractor do Fembed que já existe no CloudStream!
-                // Ele sabe como fazer a API call e obter o link .m3u8 com token!
+                // DELEGA para o extractor do Fembed!
                 return loadExtractor(data, mainUrl, subtitleCallback, callback)
             }
             
-            // 🔥 SE FOR URL DO SUPERFLIX (filme ou página de episódio)
+            // 🔥 SE FOR URL DO SUPERFLIX
             val finalUrl = if (data.startsWith("http")) data else fixUrl(data)
             val res = app.get(finalUrl, referer = mainUrl, timeout = 30)
             val doc = res.document
             val html = res.text
             
-            // Procurar URL do Fembed na página
+            // Procurar URL do Fembed
             val fembedUrl = findFembedUrlInPage(doc, html)
             
             if (fembedUrl != null) {
@@ -347,21 +335,17 @@ class SuperFlix : MainAPI() {
         }
     }
     
-    // 🔥 FUNÇÃO AUXILIAR: Encontrar URL do Fembed
     private fun findFembedUrlInPage(doc: org.jsoup.nodes.Document, html: String): String? {
-        // 1. Botões com data-url
         doc.select("button[data-url*='fembed']").forEach { button ->
             val url = button.attr("data-url")
             if (url.isNotBlank()) return url
         }
         
-        // 2. Iframes
         doc.select("iframe[src*='fembed']").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) return src
         }
         
-        // 3. Scripts
         val patterns = listOf(
             Regex("""https?://fembed\.sx/e/\d+[^"'\s]*"""),
             Regex("""https?://fembed\.sx/v/\d+[^"'\s]*"""),
@@ -378,7 +362,6 @@ class SuperFlix : MainAPI() {
         return null
     }
     
-    // 🔥 FUNÇÃO AUXILIAR: Extrair qualidade
     private fun extractQualityFromUrl(url: String): Int {
         return when {
             url.contains("/2160/") || url.contains("2160p") -> 2160

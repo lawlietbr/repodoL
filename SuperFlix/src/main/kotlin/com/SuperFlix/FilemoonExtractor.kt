@@ -22,64 +22,82 @@ class Filemoon : ExtractorApi() {
     // ESSENCIAL: Diz ao Cloudstream quais URLs este Extractor suporta
 
     override suspend fun getUrl(
-        url: String,
-        referer: String?,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ) {
-        println("FilemoonExtractor: getUrl - INÍCIO")
-        val videoId = extractVideoId(url) // <<<<< CORREÇÃO: Método adicionado abaixo
-        if (videoId.isEmpty()) return
+    url: String,
+    referer: String?,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+) {
+    println("FilemoonExtractor: getUrl - INÍCIO")
+    val videoId = extractVideoId(url)
+    if (videoId.isEmpty()) return
 
-        // 1. URLs
-        val playerEmbedUrl = if (url.contains("fembed.sx")) {
-            "https://fembed.sx/e/$videoId"
-        } else {
-            "https://filemoon.in/e/$videoId"
+    val playerEmbedUrl = if (url.contains("fembed.sx")) {
+        "https://fembed.sx/e/$videoId"
+    } else {
+        "https://filemoon.in/e/$videoId"
+    }
+
+    val apiUrl = "https://fembed.sx/api.php?s=$videoId&c="
+    
+    // =========================================================
+    // 1. FAZER GET INICIAL PARA OBTER COOKIES DE SESSÃO
+    // =========================================================
+    println("FilemoonExtractor: Fazendo GET em $playerEmbedUrl para obter cookies...")
+    
+    val initialResponse = app.get(playerEmbedUrl, headers = getHeaders(playerEmbedUrl, referer))
+    
+    if (!initialResponse.isSuccessful) {
+        println("FilemoonExtractor: ERRO: GET inicial falhou com status ${initialResponse.code}")
+        return
+    }
+
+    // O Cloudstream/okhttp gerencia os cookies automaticamente,
+    // mas vamos garantir que a URL do GET seja usada como Referer para o POST.
+    val sessionCookies = initialResponse.cookies // Captura os cookies da primeira requisição
+    println("FilemoonExtractor: Cookies de sessão obtidos: ${sessionCookies.size} item(s)")
+
+    // 2. CORPO DA REQUISIÇÃO POST (Form Data)
+    val formDataMap = mapOf(
+        "action" to "getPlayer",
+        "lang" to "DUB", 
+        "key" to "MA==" 
+    )
+    
+    val requestBody = FormBody.Builder().apply {
+        formDataMap.forEach { (key, value) ->
+            add(key, value)
         }
+    }.build()
 
-        val apiUrl = "https://fembed.sx/api.php?s=$videoId&c="
-        val requestReferer = referer ?: "https://fembed.sx/"
+    // 3. HEADERS para o POST
+    val postHeaders = getHeaders(apiUrl, playerEmbedUrl).toMutableMap()
+    postHeaders["Origin"] = playerEmbedUrl.substringBefore("/e/") 
+    
+    // Remover o "Upgrade-Insecure-Requests" que não faz sentido no POST da API
+    postHeaders.remove("Upgrade-Insecure-Requests") 
+    
+    println("FilemoonExtractor: Fazendo requisição POST para Player HTML (com cookies de sessão)")
 
-        println("FilemoonExtractor: POST API URL: $apiUrl")
-        println("FilemoonExtractor: POST Referer Header: $playerEmbedUrl")
+    // 4. Executar o POST
+    val response = app.post(
+        apiUrl, 
+        headers = postHeaders,
+        requestBody = requestBody,
+        referer = playerEmbedUrl,
+        cookies = sessionCookies // <<<<< CHAVE: USAR OS COOKIES DA SESSÃO AQUI
+    )
 
-        try {
-            // 2. CORPO DA REQUISIÇÃO POST (Form Data)
-            val formDataMap = mapOf(
-                "action" to "getPlayer",
-                "lang" to "DUB", 
-                "key" to "MA==" 
-            )
-            
-            // CONVERTER MAPA PARA FormBody (para corrigir o erro 'Argument type mismatch')
-            val requestBody = FormBody.Builder().apply {
-                formDataMap.forEach { (key, value) ->
-                    add(key, value)
-                }
-            }.build()
+    // ... (o restante do código de verificação e extração de M3U8 permanece o mesmo) ...
+    if (!response.isSuccessful) {
+        println("FilemoonExtractor: ERRO: POST falhou com status ${response.code}. Resposta do corpo: ${response.text.take(500)}") // Adicione log do corpo para debug
+        return
+    }
 
-            // 3. HEADERS para o POST
-            val postHeaders = getHeaders(apiUrl, playerEmbedUrl).toMutableMap() // <<<<< CORREÇÃO: Método adicionado abaixo
-            postHeaders["Origin"] = playerEmbedUrl.substringBefore("/e/") 
-
-            println("FilemoonExtractor: Fazendo requisição POST para Player HTML")
-
-            // 4. Executar o POST
-            val response = app.post(
-                apiUrl, 
-                headers = postHeaders,
-                requestBody = requestBody, // <<<<< CORREÇÃO 2: Passando FormBody
-                referer = playerEmbedUrl 
-            )
-
-            if (!response.isSuccessful) {
-                println("FilemoonExtractor: ERRO: POST falhou com status ${response.code}")
-                return
-            }
-
-            val finalPlayerHtml = response.text
-            println("FilemoonExtractor: Player HTML obtido (${finalPlayerHtml.length} chars)")
+    val finalPlayerHtml = response.text
+    println("FilemoonExtractor: Player HTML obtido (${finalPlayerHtml.length} chars)")
+    // ... (continua a extração do M3U8) ...
+    // ...
+}
 
             // 5. Extrair M3U8 do HTML de resposta
             val m3u8Url = extractM3u8Url(finalPlayerHtml) // <<<<< CORREÇÃO: Método adicionado abaixo

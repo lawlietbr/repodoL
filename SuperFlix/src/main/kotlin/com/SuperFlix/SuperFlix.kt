@@ -3,7 +3,6 @@ package com.SuperFlix
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.SuperFlix.extractors.FembedExtractor // Importar o extrator
 import org.jsoup.nodes.Element
 import java.net.URLEncoder
 
@@ -14,9 +13,6 @@ class SuperFlix : MainAPI() {
     override var lang = "pt-br"
     override val hasDownloadSupport = true
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
-    
-    // Criar instância do extrator Fembed
-    private val fembedExtractor = FembedExtractor()
 
     override val mainPage = mainPageOf(
         "$mainUrl/filmes" to "Filmes",
@@ -258,41 +254,23 @@ class SuperFlix : MainAPI() {
         println("SuperFlix DEBUG: loadLinks chamado com data = '$data'")
 
         return try {
-            // Primeiro, verificar se é uma URL válida do Fembed
-            if (!isFembedUrl(data)) {
-                println("SuperFlix DEBUG: URL não é do Fembed")
-                return false
-            }
-
-            // ESTRATÉGIA 1: Usar o extrator Fembed customizado
-            println("SuperFlix DEBUG: 🚀 Usando extrator Fembed customizado...")
-            
-            val links = fembedExtractor.getUrl(data, mainUrl)
-            if (links != null && links.isNotEmpty()) {
-                println("SuperFlix DEBUG: ✅ Extrator Fembed encontrou ${links.size} links")
-                links.forEach { link ->
-                    callback.invoke(link)
-                }
-                return true
-            }
-
-            // ESTRATÉGIA 2: Fallback para o extrator padrão do CloudStream
-            println("SuperFlix DEBUG: Tentando extrator padrão do CloudStream...")
+            // Primeiro, tentar o extrator padrão do CloudStream
+            println("SuperFlix DEBUG: Tentando extrator padrão...")
             
             if (loadExtractor(data, mainUrl, subtitleCallback, callback)) {
                 println("SuperFlix DEBUG: ✅ Extrator padrão funcionou!")
                 return true
             }
 
-            // ESTRATÉGIA 3: Tentar diferentes domínios do Fembed
-            println("SuperFlix DEBUG: Tentando diferentes domínios do Fembed...")
+            // Se não funcionar, tentar diferentes domínios
+            println("SuperFlix DEBUG: Tentando diferentes domínios...")
             
             val alternativeUrls = generateAlternativeUrls(data)
             for (altUrl in alternativeUrls) {
                 println("SuperFlix DEBUG: Tentando: $altUrl")
                 
                 if (loadExtractor(altUrl, mainUrl, subtitleCallback, callback)) {
-                    println("SuperFlix DEBUG: ✅ Domínio alternativo funcionou: $altUrl")
+                    println("SuperFlix DEBUG: ✅ Domínio alternativo funcionou!")
                     return true
                 }
             }
@@ -307,24 +285,6 @@ class SuperFlix : MainAPI() {
         }
     }
     
-    private fun isFembedUrl(url: String): Boolean {
-        val fembedPatterns = listOf(
-            "fembed",
-            "feurl",
-            "fcdn",
-            "femax20",
-            "fembeder",
-            "vanfem",
-            "24hd",
-            "vcdn",
-            "asianclub",
-            "embedsito"
-        )
-        
-        val urlLower = url.lowercase()
-        return fembedPatterns.any { pattern -> urlLower.contains(pattern) }
-    }
-    
     private fun generateAlternativeUrls(originalUrl: String): List<String> {
         val urls = mutableListOf<String>()
         val domains = listOf(
@@ -332,7 +292,12 @@ class SuperFlix : MainAPI() {
             "www.fembed.com",
             "fembed.to",
             "feurl.com",
-            "fcdn.stream"
+            "fcdn.stream",
+            "femax20.com",
+            "fembeder.com",
+            "vanfem.com",
+            "24hd.club",
+            "vcdn.io"
         )
         
         // Extrair o caminho (ex: /v/304115/1-1)

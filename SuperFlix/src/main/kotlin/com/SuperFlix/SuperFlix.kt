@@ -151,7 +151,6 @@ class SuperFlix : MainAPI() {
                       else result.release_date?.substring(0, 4)?.toIntOrNull(),
                 posterUrl = result.poster_path?.let { "$tmdbImageUrl/w500$it" },
                 backdropUrl = details?.backdrop_path?.let { "$tmdbImageUrl/original$it" },
-                rating = result.vote_average,
                 overview = details?.overview,
                 genres = details?.genres?.map { it.name },
                 actors = details?.credits?.cast?.take(10)?.map { actor ->
@@ -196,129 +195,81 @@ class SuperFlix : MainAPI() {
     }
 
     // =========================================================================
-// CRIAR RESPOSTA COM TMDB (SUSPEND CORRIGIDO)
-// ========================================================================= 
-private suspend fun createLoadResponseWithTMDB(
-    tmdbInfo: TMDBInfo,
-    url: String,
-    document: org.jsoup.nodes.Document,
-    isSerie: Boolean
-): LoadResponse {
-    return if (isSerie) {
-        val episodes = extractEpisodesFromButtons(document, url)
-        
-        newTvSeriesLoadResponse(
-            name = tmdbInfo.title ?: "",
-            url = url,
-            type = TvType.TvSeries,
-            episodes = episodes
-        ) {
-            this.posterUrl = tmdbInfo.posterUrl
-            this.backgroundPosterUrl = tmdbInfo.backdropUrl
-            this.year = tmdbInfo.year
-            this.plot = tmdbInfo.overview
-            this.tags = tmdbInfo.genres
-            // Usando score em vez de rating (depreciado)
-            tmdbInfo.rating?.let { 
-                val scoreValue = (it * 10).toInt() // Converte 0-10 para 0-100
-                this.score = Score(scoreValue, tmdbInfo.rating?.toString() ?: "")
-            }
+    // CRIAR RESPOSTA COM TMDB (SUSPEND CORRIGIDO)
+    // =========================================================================
+    private suspend fun createLoadResponseWithTMDB(
+        tmdbInfo: TMDBInfo,
+        url: String,
+        document: org.jsoup.nodes.Document,
+        isSerie: Boolean
+    ): LoadResponse {
+        return if (isSerie) {
+            val episodes = extractEpisodesFromButtons(document, url)
             
-            tmdbInfo.actors?.let { addActors(it) }
-            tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
-            
-            this.recommendations = tmdbInfo.recommendations?.map { rec ->
-                if (rec.isMovie) {
-                    newMovieSearchResponse(rec.title ?: "", "", TvType.Movie) {
-                        this.posterUrl = rec.posterUrl
-                        this.year = rec.year
-                    }
-                } else {
-                    newTvSeriesSearchResponse(rec.title ?: "", "", TvType.TvSeries) {
-                        this.posterUrl = rec.posterUrl
-                        this.year = rec.year
+            newTvSeriesLoadResponse(
+                name = tmdbInfo.title ?: "",
+                url = url,
+                type = TvType.TvSeries,
+                episodes = episodes
+            ) {
+                this.posterUrl = tmdbInfo.posterUrl
+                this.backgroundPosterUrl = tmdbInfo.backdropUrl
+                this.year = tmdbInfo.year
+                this.plot = tmdbInfo.overview
+                this.tags = tmdbInfo.genres
+                
+                tmdbInfo.actors?.let { addActors(it) }
+                tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
+                
+                this.recommendations = tmdbInfo.recommendations?.map { rec ->
+                    if (rec.isMovie) {
+                        newMovieSearchResponse(rec.title ?: "", "", TvType.Movie) {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.year
+                        }
+                    } else {
+                        newTvSeriesSearchResponse(rec.title ?: "", "", TvType.TvSeries) {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.year
+                        }
                     }
                 }
             }
-        }
-    } else {
-        val playerUrl = findPlayerUrl(document)
-        
-        newMovieLoadResponse(
-            name = tmdbInfo.title ?: "",
-            url = url,
-            type = TvType.Movie,
-            dataUrl = playerUrl ?: url
-        ) {
-            this.posterUrl = tmdbInfo.posterUrl
-            this.backgroundPosterUrl = tmdbInfo.backdropUrl
-            this.year = tmdbInfo.year
-            this.plot = tmdbInfo.overview
-            this.tags = tmdbInfo.genres
-            // Usando score em vez de rating (depreciado)
-            tmdbInfo.rating?.let { 
-                val scoreValue = (it * 10).toInt() // Converte 0-10 para 0-100
-                this.score = Score(scoreValue, tmdbInfo.rating?.toString() ?: "")
-            }
-            this.duration = tmdbInfo.duration
+        } else {
+            val playerUrl = findPlayerUrl(document)
             
-            tmdbInfo.actors?.let { addActors(it) }
-            tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
-            
-            this.recommendations = tmdbInfo.recommendations?.map { rec ->
-                if (rec.isMovie) {
-                    newMovieSearchResponse(rec.title ?: "", "", TvType.Movie) {
-                        this.posterUrl = rec.posterUrl
-                        this.year = rec.year
-                    }
-                } else {
-                    newTvSeriesSearchResponse(rec.title ?: "", "", TvType.TvSeries) {
-                        this.posterUrl = rec.posterUrl
-                        this.year = rec.year
+            newMovieLoadResponse(
+                name = tmdbInfo.title ?: "",
+                url = url,
+                type = TvType.Movie,
+                dataUrl = playerUrl ?: url
+            ) {
+                this.posterUrl = tmdbInfo.posterUrl
+                this.backgroundPosterUrl = tmdbInfo.backdropUrl
+                this.year = tmdbInfo.year
+                this.plot = tmdbInfo.overview
+                this.tags = tmdbInfo.genres
+                this.duration = tmdbInfo.duration
+                
+                tmdbInfo.actors?.let { addActors(it) }
+                tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
+                
+                this.recommendations = tmdbInfo.recommendations?.map { rec ->
+                    if (rec.isMovie) {
+                        newMovieSearchResponse(rec.title ?: "", "", TvType.Movie) {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.year
+                        }
+                    } else {
+                        newTvSeriesSearchResponse(rec.title ?: "", "", TvType.TvSeries) {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.year
+                        }
                     }
                 }
             }
         }
     }
-}
-
-// =========================================================================
-// FALLBACK: DADOS DO SITE (SUSPEND CORRIGIDO)
-// =========================================================================
-private suspend fun createLoadResponseFromSite(
-    document: org.jsoup.nodes.Document,
-    url: String,
-    title: String,
-    year: Int?,
-    isSerie: Boolean
-): LoadResponse {
-    val ogImage = document.selectFirst("meta[property='og:image']")?.attr("content")
-    val poster = ogImage?.let { fixUrl(it) }
-
-    val description = document.selectFirst("meta[name='description']")?.attr("content")
-    val synopsis = document.selectFirst(".syn, .description")?.text()
-    val plot = description ?: synopsis
-
-    val tags = document.select("a.chip, .chip").map { it.text() }.takeIf { it.isNotEmpty() }
-
-    return if (isSerie) {
-        val episodes = extractEpisodesFromButtons(document, url)
-        newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = plot
-            this.tags = tags
-        }
-    } else {
-        val playerUrl = findPlayerUrl(document)
-        newMovieLoadResponse(title, url, TvType.Movie, playerUrl ?: url) {
-            this.posterUrl = poster
-            this.year = year
-            this.plot = plot
-            this.tags = tags
-        }
-    }
-}
 
     // =========================================================================
     // FALLBACK: DADOS DO SITE (SUSPEND CORRIGIDO)
@@ -367,7 +318,6 @@ private suspend fun createLoadResponseFromSite(
         val year: Int?,
         val posterUrl: String?,
         val backdropUrl: String?,
-        val rating: Float?,
         val overview: String?,
         val genres: List<String>?,
         val actors: List<Actor>?,
@@ -394,7 +344,7 @@ private suspend fun createLoadResponseFromSite(
         val release_date: String? = null,
         val first_air_date: String? = null,
         val poster_path: String?,
-        val vote_average: Float
+        val vote_average: Float // Mantido mas não usado
     )
 
     private data class TMDBDetailsResponse(

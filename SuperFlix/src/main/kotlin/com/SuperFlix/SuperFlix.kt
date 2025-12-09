@@ -183,22 +183,18 @@ class SuperFlix : MainAPI() {
     // =========================================================================
     // FUNÇÃO loadLinks CORRIGIDA: Usa apenas o loadExtractor para forçar o WebView
     // =========================================================================
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        println("SuperFlix: loadLinks - INÍCIO para: $data. Confiança total no Extractor Padrão/WebView.")
+    // Nota: Dependendo da versão da sua biblioteca, a importação exata pode variar.
 
-        if (data.isEmpty()) {
-            println("SuperFlix: loadLinks - ERRO: URL vazia")
-            return false
-        }
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    // Chamada correta:
+    return ExtractorApi.extract(data, subtitleCallback, callback)
+}
 
-        // Chamada direta ao Extractor Padrão.
-        return loadExtractor(data, subtitleCallback, callback)
-    }
 
     // =========================================================================
     // FUNÇÕES DE RASPAGEM MANUAL REMOVIDAS (para forçar o uso de Extractor Padrão/WebView)

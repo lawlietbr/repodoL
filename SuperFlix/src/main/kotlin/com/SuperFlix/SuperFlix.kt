@@ -17,14 +17,19 @@ class SuperFlix : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override val usesWebView = true
 
+    // API do TMDB
+    private val tmdbApiKey = "f9a1e262f2251496b1efa1cd5759680a"
+    private val tmdbBaseUrl = "https://api.themoviedb.org/3"
+    private val tmdbImageUrl = "https://image.tmdb.org/t/p"
+
     // =========================================================================
     // PÁGINA PRINCIPAL
     // =========================================================================
     override val mainPage = mainPageOf(
         "$mainUrl/lancamentos" to "Lançamentos",
-        "$mainUrl/filmes" to "Filmes",
-        "$mainUrl/series" to "Séries",
-        "$mainUrl/animes" to "Animes"
+        "$mainUrl/filmes" to "Últimos Filmes",
+        "$mainUrl/series" to "Últimas Séries",
+       // "$mainUrl/animes" to "Animes"
     )
 
     // =========================================================================
@@ -119,7 +124,7 @@ class SuperFlix : MainAPI() {
     }
 
     // =========================================================================
-    // CARREGAR DETALHES (VERSÃO SIMPLIFICADA)
+    // CARREGAR DETALHES - VERSÃO CORRIGIDA
     // =========================================================================
     override suspend fun load(url: String): LoadResponse? {
         println("🎬 SuperFlix: Carregando página: $url")
@@ -127,63 +132,288 @@ class SuperFlix : MainAPI() {
         try {
             val document = app.get(url).document
             
-            // 1. Extrair título
-            val title = document.selectFirst("h1")?.text() ?: return null
+            // 1. PRIMEIRO: Tenta extrair usando a mesma lógica da página principal
+            // Procura por cards na página (pode ter cards relacionados)
+            val card = document.selectFirst("a.card")
+            var searchResult: SearchResponse? = null
             
-            // 2. Determinar tipo pela URL
+            if (card != null) {
+                searchResult = card.toSearchResult()
+                if (searchResult != null) {
+                    println("✅ Encontrado card na página, usando dados do card")
+                }
+            }
+            
+            // 2. Se não encontrou card, extrai manualmente do título da página
+            val title = document.selectFirst("h1")?.text() ?: 
+                       document.selectFirst("title")?.text()?.replace(" | SuperFlix", "") ?: 
+                       return null
+            
             val isSerie = url.contains("/serie/")
-            
-            // 3. Extrair ano do título
-            val year = Regex("\\((\\d{4})\\)").find(title)?.groupValues?.get(1)?.toIntOrNull()
+            val yearMatch = Regex("\\((\\d{4})\\)").find(title)
+            val year = yearMatch?.groupValues?.get(1)?.toIntOrNull()
             val cleanTitle = title.replace(Regex("\\(\\d{4}\\)"), "").trim()
             
             println("🎬 SuperFlix: Carregando '$cleanTitle' (${if (isSerie) "Série" else "Filme"}, Ano: $year)")
             
-            // 4. Extrair poster
-            val poster = document.selectFirst("meta[property='og:image']")?.attr("content")?.let { fixUrl(it) }
+            // 3. Usar título do card (se encontrou) ou título da página
+            val finalTitle = searchResult?.name ?: cleanTitle
+            val finalYear = searchResult?.year ?: year
             
-            // 5. Extrair descrição
+            // 4. Tenta buscar no TMDB
+            val tmdbInfo = if (isSerie) {
+                searchOnTMDB(finalTitle, finalYear, true)
+            } else {
+                searchOnTMDB(finalTitle, finalYear, false)
+            }
+            
+            // 5. Extrair dados básicos do site (sempre)
+            val poster = document.selectFirst("meta[property='og:image']")?.attr("content")?.let { fixUrl(it) }
+                         ?: searchResult?.posterUrl
+            
             val description = document.selectFirst("meta[property='og:description']")?.attr("content")
             
-            // 6. Extrair tags/gêneros
             val tags = document.select("a[href*='/categoria/']").map { it.text() }.takeIf { it.isNotEmpty() }
             
-            if (isSerie) {
-                // 7. Extrair episódios
-                val episodes = extractEpisodesFromDocument(document, url)
-                println("📺 Encontrados ${episodes.size} episódios")
-                
-                // Se não encontrou episódios, criar pelo menos 1 episódio
-                val finalEpisodes = if (episodes.isEmpty()) {
-                    listOf(
-                        newEpisode(url) {
-                            name = "Episódio 1"
-                            season = 1
-                            episode = 1
-                        }
-                    )
-                } else {
-                    episodes
-                }
-                
-                return newTvSeriesLoadResponse(cleanTitle, url, TvType.TvSeries, finalEpisodes) {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = description
-                    this.tags = tags
-                }
+            // 6. Se encontrou dados do TMDB, usa enriquecido
+            return if (tmdbInfo != null) {
+                println("✅ SuperFlix: Dados do TMDB encontrados para '$finalTitle'")
+                createLoadResponseWithTMDB(tmdbInfo, url, document, isSerie, poster, description, tags)
             } else {
-                return newMovieLoadResponse(cleanTitle, url, TvType.Movie, "") {
-                    this.posterUrl = poster
-                    this.year = year
-                    this.plot = description
-                    this.tags = tags
-                }
+                println("⚠️ SuperFlix: Usando dados do site para '$finalTitle'")
+                // Fallback para dados do site
+                createLoadResponseFromSite(url, finalTitle, finalYear, poster, description, tags, isSerie, document)
             }
             
         } catch (e: Exception) {
             println("❌ Erro ao carregar página: ${e.message}")
+            e.printStackTrace()
             return null
+        }
+    }
+
+    // =========================================================================
+    // BUSCA NO TMDB (API DIRETA)
+    // =========================================================================
+    private suspend fun searchOnTMDB(query: String, year: Int?, isTv: Boolean): TMDBInfo? {
+        return try {
+            val type = if (isTv) "tv" else "movie"
+            val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+            val yearParam = year?.let { "&year=$it" } ?: ""
+
+            val searchUrl = "$tmdbBaseUrl/search/$type?" +
+                           "api_key=$tmdbApiKey" +
+                           "&language=pt-BR" +
+                           "&query=$encodedQuery" +
+                           yearParam
+
+            println("🔍 TMDB: Buscando '$query' ($type)")
+            val response = app.get(searchUrl, timeout = 10_000)
+            val searchResult = response.parsedSafe<TMDBSearchResponse>()
+
+            val result = searchResult?.results?.firstOrNull()
+            if (result == null) {
+                println("❌ TMDB: Nenhum resultado para '$query'")
+                return null
+            }
+
+            println("✅ TMDB: Encontrado '${if (isTv) result.name else result.title}' (ID: ${result.id})")
+
+            // Busca detalhes completos
+            val details = getTMDBDetails(result.id, isTv)
+
+            TMDBInfo(
+                id = result.id,
+                title = if (isTv) result.name else result.title,
+                year = if (isTv) result.first_air_date?.substring(0, 4)?.toIntOrNull()
+                      else result.release_date?.substring(0, 4)?.toIntOrNull(),
+                posterUrl = result.poster_path?.let { "$tmdbImageUrl/w500$it" },
+                backdropUrl = details?.backdrop_path?.let { "$tmdbImageUrl/original$it" },
+                overview = details?.overview,
+                genres = details?.genres?.map { it.name },
+                actors = details?.credits?.cast?.take(10)?.map { actor ->
+                    Actor(actor.name, actor.profile_path?.let { "$tmdbImageUrl/w185$it" })
+                },
+                youtubeTrailer = details?.videos?.results
+                    ?.find { it.site == "YouTube" && it.type == "Trailer" }
+                    ?.key,
+                duration = if (!isTv) details?.runtime else null,
+                recommendations = details?.recommendations?.results?.take(5)?.map { rec ->
+                    TMDBRecommendation(
+                        title = if (isTv) rec.name else rec.title,
+                        posterUrl = rec.poster_path?.let { "$tmdbImageUrl/w500$it" },
+                        recYear = if (isTv) rec.first_air_date?.substring(0, 4)?.toIntOrNull()
+                                 else rec.release_date?.substring(0, 4)?.toIntOrNull(),
+                        isMovie = !isTv
+                    )
+                }
+            )
+        } catch (e: Exception) {
+            println("❌ TMDB: Erro na busca - ${e.message}")
+            null
+        }
+    }
+
+    // =========================================================================
+    // DETALHES DO TMDB
+    // =========================================================================
+    private suspend fun getTMDBDetails(id: Int, isTv: Boolean): TMDBDetailsResponse? {
+        return try {
+            val type = if (isTv) "tv" else "movie"
+            val url = "$tmdbBaseUrl/$type/$id?" +
+                     "api_key=$tmdbApiKey" +
+                     "&language=pt-BR" +
+                     "&append_to_response=credits,videos,recommendations"
+
+            app.get(url, timeout = 10_000).parsedSafe<TMDBDetailsResponse>()
+        } catch (e: Exception) {
+            println("❌ TMDB: Erro nos detalhes - ${e.message}")
+            null
+        }
+    }
+
+    // =========================================================================
+    // CRIAR RESPOSTA COM TMDB (CORRIGIDA)
+    // =========================================================================
+    private suspend fun createLoadResponseWithTMDB(
+        tmdbInfo: TMDBInfo,
+        url: String,
+        document: org.jsoup.nodes.Document,
+        isSerie: Boolean,
+        sitePoster: String?,
+        siteDescription: String?,
+        siteTags: List<String>?
+    ): LoadResponse {
+        
+        // Usar poster do TMDB ou do site
+        val finalPoster = tmdbInfo.posterUrl ?: sitePoster
+        // Usar descrição do TMDB ou do site
+        val finalDescription = tmdbInfo.overview ?: siteDescription
+        // Usar tags do TMDB ou do site
+        val finalTags = tmdbInfo.genres ?: siteTags
+        
+        return if (isSerie) {
+            val episodes = extractEpisodesFromDocument(document, url)
+            println("📺 Encontrados ${episodes.size} episódios")
+            
+            // Se não encontrou episódios, criar pelo menos 1
+            val finalEpisodes = if (episodes.isEmpty()) {
+                listOf(newEpisode(url) {
+                    name = "Episódio 1"
+                    season = 1
+                    episode = 1
+                })
+            } else {
+                episodes
+            }
+
+            newTvSeriesLoadResponse(
+                name = tmdbInfo.title ?: "",
+                url = url,
+                type = TvType.TvSeries,
+                episodes = finalEpisodes
+            ) {
+                this.posterUrl = finalPoster
+                this.backgroundPosterUrl = tmdbInfo.backdropUrl
+                this.year = tmdbInfo.year
+                this.plot = finalDescription
+                this.tags = finalTags
+
+                tmdbInfo.actors?.let { addActors(it) }
+                tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
+
+                // Recomendações
+                this.recommendations = tmdbInfo.recommendations?.map { rec ->
+                    if (rec.isMovie) {
+                        newMovieSearchResponse(rec.title ?: "", "") {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.recYear
+                        }
+                    } else {
+                        newTvSeriesSearchResponse(rec.title ?: "", "") {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.recYear
+                        }
+                    }
+                }
+            }
+        } else {
+            newMovieLoadResponse(
+                name = tmdbInfo.title ?: "",
+                url = url,
+                type = TvType.Movie,
+                dataUrl = ""
+            ) {
+                this.posterUrl = finalPoster
+                this.backgroundPosterUrl = tmdbInfo.backdropUrl
+                this.year = tmdbInfo.year
+                this.plot = finalDescription
+                this.tags = finalTags
+                this.duration = tmdbInfo.duration
+
+                tmdbInfo.actors?.let { addActors(it) }
+                tmdbInfo.youtubeTrailer?.let { addTrailer(it) }
+
+                // Recomendações
+                this.recommendations = tmdbInfo.recommendations?.map { rec ->
+                    if (rec.isMovie) {
+                        newMovieSearchResponse(rec.title ?: "", "") {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.recYear
+                        }
+                    } else {
+                        newTvSeriesSearchResponse(rec.title ?: "", "") {
+                            this.posterUrl = rec.posterUrl
+                            this.year = rec.recYear
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // FALLBACK: DADOS DO SITE (CORRIGIDA)
+    // =========================================================================
+    private suspend fun createLoadResponseFromSite(
+        url: String,
+        title: String,
+        year: Int?,
+        poster: String?,
+        description: String?,
+        tags: List<String>?,
+        isSerie: Boolean,
+        document: org.jsoup.nodes.Document
+    ): LoadResponse {
+        
+        return if (isSerie) {
+            val episodes = extractEpisodesFromDocument(document, url)
+            println("📺 Encontrados ${episodes.size} episódios")
+            
+            // Se não encontrou episódios, criar pelo menos 1
+            val finalEpisodes = if (episodes.isEmpty()) {
+                listOf(newEpisode(url) {
+                    name = "Episódio 1"
+                    season = 1
+                    episode = 1
+                })
+            } else {
+                episodes
+            }
+            
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, finalEpisodes) {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = description
+                this.tags = tags
+            }
+        } else {
+            newMovieLoadResponse(title, url, TvType.Movie, "") {
+                this.posterUrl = poster
+                this.year = year
+                this.plot = description
+                this.tags = tags
+            }
         }
     }
 
@@ -207,7 +437,7 @@ class SuperFlix : MainAPI() {
             })
         }
         
-        // Estratégia 2: Links que parecem ser de episódios
+        // Estratégia 2: Links de episódios
         if (episodes.isEmpty()) {
             document.select("a[href*='episodio'], a[href*='episode'], a[href*='assistir']").forEachIndexed { index, element ->
                 val href = element.attr("href")?.takeIf { it.isNotBlank() } ?: return@forEachIndexed
@@ -223,6 +453,69 @@ class SuperFlix : MainAPI() {
         
         return episodes.distinctBy { it.url }
     }
+
+    // =========================================================================
+    // CLASSES DE DADOS PARA TMDB
+    // =========================================================================
+    private data class TMDBInfo(
+        val id: Int,
+        val title: String?,
+        val year: Int?,
+        val posterUrl: String?,
+        val backdropUrl: String?,
+        val overview: String?,
+        val genres: List<String>?,
+        val actors: List<Actor>?,
+        val youtubeTrailer: String?,
+        val duration: Int?,
+        val recommendations: List<TMDBRecommendation>?
+    )
+
+    private data class TMDBRecommendation(
+        val title: String?,
+        val posterUrl: String?,
+        val recYear: Int?,
+        val isMovie: Boolean
+    )
+
+    private data class TMDBSearchResponse(
+        @JsonProperty("results") val results: List<TMDBResult>
+    )
+
+    private data class TMDBResult(
+        val id: Int,
+        val title: String? = null,
+        val name: String? = null,
+        val release_date: String? = null,
+        val first_air_date: String? = null,
+        val poster_path: String?
+    )
+
+    private data class TMDBDetailsResponse(
+        val overview: String?,
+        val backdrop_path: String?,
+        val runtime: Int?,
+        val genres: List<TMDBGenre>?,
+        val credits: TMDBCredits?,
+        val videos: TMDBVideos?,
+        val recommendations: TMDBRecommendationsResponse?
+    )
+
+    private data class TMDBGenre(val name: String)
+    private data class TMDBCredits(val cast: List<TMDBCast>)
+    private data class TMDBCast(val name: String, val profile_path: String?)
+    private data class TMDBVideos(val results: List<TMDBVideo>)
+    private data class TMDBVideo(val key: String, val site: String, val type: String)
+    private data class TMDBRecommendationsResponse(val results: List<TMDBRecommendationResult>)
+
+    private data class TMDBRecommendationResult(
+        val id: Int,
+        val title: String? = null,
+        val name: String? = null,
+        val poster_path: String?,
+        val release_date: String? = null,
+        val first_air_date: String? = null
+    )
 
     // =========================================================================
     // CARREGAR LINKS DE VÍDEO

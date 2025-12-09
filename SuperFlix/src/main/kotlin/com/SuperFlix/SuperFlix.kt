@@ -73,12 +73,56 @@ class SuperFlix : MainAPI() {
     // =========================================================================
     // BUSCA
     // =========================================================================
-    override suspend fun search(query: String): List<SearchResponse> {
-        val searchUrl = "$mainUrl/?s=${java.net.URLEncoder.encode(query, "UTF-8")}"
-        val document = app.get(searchUrl).document
-
-        return document.select("a.card").mapNotNull { it.toSearchResult() }
+  override suspend fun search(query: String): List<SearchResponse> {
+    println("🔍 === DEBUG PESQUISA SUPERFLIX ===")
+    println("🔍 Query original: '$query'")
+    
+    val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
+    println("🔍 Query codificada: '$encodedQuery'")
+    
+    val searchUrl = "$mainUrl/?s=$encodedQuery"
+    println("🔍 URL de busca: $searchUrl")
+    
+    val document = app.get(searchUrl).document
+    
+    // DEBUG: Mostra o título da página
+    println("🔍 Título da página: ${document.title()}")
+    
+    // DEBUG: Conta quantos elementos .card encontrou
+    val cards = document.select("a.card")
+    println("🔍 Elementos 'a.card' encontrados: ${cards.size}")
+    
+    // DEBUG: Mostra os primeiros 5 cards
+    cards.take(5).forEachIndexed { index, card ->
+        println("🔍 Card $index:")
+        println("   Título (title attr): '${card.attr("title")}'")
+        println("   Href: '${card.attr("href")}'")
+        println("   Tem imagem: ${card.selectFirst("img") != null}")
+        println("   Src da imagem: '${card.selectFirst("img")?.attr("src")}'")
     }
+    
+    // DEBUG: Verifica se há outros seletores possíveis
+    println("🔍 Outros seletores possíveis:")
+    println("   div.grid encontrados: ${document.select("div.grid").size}")
+    println("   .grid encontrados: ${document.select(".grid").size}")
+    println("   article encontrados: ${document.select("article").size}")
+    println("   .item encontrados: ${document.select(".item").size}")
+    
+    // Se não encontrar com a.card, tenta outros seletores
+    val results = if (cards.isNotEmpty()) {
+        cards.mapNotNull { it.toSearchResult() }
+    } else {
+        // Tenta seletores alternativos
+        document.select("div.grid a, .grid a, article a, .item a").mapNotNull { 
+            it.toSearchResult() 
+        }
+    }
+    
+    println("🔍 Resultados encontrados: ${results.size}")
+    println("🔍 === FIM DEBUG ===")
+    
+    return results
+}
 
     // =========================================================================
     // CARREGAR DETALHES (COM TMDB INTEGRADO)

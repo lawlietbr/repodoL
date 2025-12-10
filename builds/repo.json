@@ -2,5 +2,5 @@
   "name": "CloudStream Brasil Repo",
   "description": "Repositório Brasileiro de Provedores CloudStream",
   "manifestVersion": 1,
-  "pluginLists": ["https://github.com/euluanzz/lawlietbr/raw/refs/heads/main/builds/plugins.json"]
+  "pluginLists": ["https://github.com/lawlietbr/lawlietbr/raw/refs/heads/main/builds/plugins.json"]
 }

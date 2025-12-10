@@ -2,7 +2,7 @@
     {
         "iconUrl": "https://superflix21.lol/assets/logo.png",
         "apiVersion": 1,
-        "repositoryUrl": "https://github.com/euluanzz/lawlietbr",
+        "repositoryUrl": "https://github.com/lawlietbt/lietrepo",
         "fileSize": 45137,
         "status": 1,
         "language": "pt-br",
@@ -16,7 +16,7 @@
         "version": 1,
         "internalName": "SuperFlix",
         "description": "SuperFlix - Filmes e S\u00e9ries em Portugu\u00eas",
-        "url": "https://github.com/lawlietbr/lawlietbr/raw/refs/heads/main/builds/SuperFlix.cs3",
+        "url": "https://github.com/lawlietbr/lietrepo/raw/refs/heads/main/builds/SuperFlix.cs3",
         "name": "SuperFlix"
     }
 ]

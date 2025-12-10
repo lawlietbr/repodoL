@@ -2,7 +2,7 @@
 
 <img src="https://media1.tenor.com/m/0j2SrBcInToAAAAC/l-lawliet-death-note.gif" width="180"/>
 
-# 👋 E aí… eu sou o **L**
+# 👋 E aí… esse é o **L**
 ## (Sim, *aquele* L. Faz o L aí 😎)
 
 ### 🇧🇷 A Extensão BR que faltava pro CloudStream 3 — simples, direta e feita pra rodar liso.  

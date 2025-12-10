@@ -1,78 +1,78 @@
 name: build do L
 
 on:
-push:
-branches:
-- main
-workflow_dispatch:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: ubuntu-latest
-permissions:
-contents: write
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-steps:  
-  # 1. CHECKOUT  
-  - uses: actions/checkout@v4  
-    with:  
-      token: ${{ secrets.GITHUB_TOKEN }}  
+    steps:
+      # 1. CHECKOUT
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. SETUP JAVA  
-  - name: Set up JDK 17  
-    uses: actions/setup-java@v4  
-    with:  
-      java-version: '17'  
-      distribution: 'temurin'  
-      cache: 'gradle'  
+      # 2. SETUP JAVA
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
 
-  - name: Grant execute permission for gradlew  
-    run: chmod +x gradlew  
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-  # 3. BUILD  
-  - name: Build with Gradle  
-    run: ./gradlew assemble --refresh-dependencies --info --stacktrace  
+      # 3. BUILD
+      - name: Build with Gradle
+        run: ./gradlew assemble --refresh-dependencies --info --stacktrace
 
-  # 4. GERAÇÃO DOS MANIFESTOS  
-  - name: Generate plugins.json  
-    run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"  
+      # 4. GERAÇÃO DOS MANIFESTOS
+      - name: Generate plugins.json
+        run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
 
-  # 5. CRIAÇÃO DO REPO + CORREÇÃO DE URLs  
-  - name: Move, Fix URLs and Create repo.json  
-    run: |  
-      # Base RAW do GitHub para downloads  
-      REPO_BASE_URL="https://github.com/${{ github.repository }}/raw/refs/heads/main/builds"  
-      PLUGINS_LIST="[\"$REPO_BASE_URL/plugins.json\"]"  
+      # 5. CRIAÇÃO DO REPO + CORREÇÃO DE URLs
+      - name: Move, Fix URLs and Create repo.json
+        run: |
+          # Base RAW do GitHub para downloads
+          REPO_BASE_URL="https://github.com/${{ github.repository }}/raw/refs/heads/main/builds"
+          PLUGINS_LIST="[\"$REPO_BASE_URL/plugins.json\"]"
 
-      mkdir -p builds  
-      mv build/plugins.json builds/plugins.json  
+          mkdir -p builds
+          mv build/plugins.json builds/plugins.json
 
-      # Escapa a URL para uso no sed  
-      REPO_BASE_URL_ESCAPED=$(echo $REPO_BASE_URL | sed 's/\//\\\//g')  
+          # Escapa a URL para uso no sed
+          REPO_BASE_URL_ESCAPED=$(echo $REPO_BASE_URL | sed 's/\//\\\//g')
 
-      # Corrige URLs internas do plugins.json (.cs3)  
-      sed -i -E 's|"url": "[^"]*/([^/]+)\.cs3"|"url": "'"$REPO_BASE_URL_ESCAPED"'/\1.cs3"|g' builds/plugins.json  
+          # Corrige URLs internas do plugins.json (.cs3)
+          sed -i -E 's|"url": "[^"]*/([^/]+)\.cs3"|"url": "'"$REPO_BASE_URL_ESCAPED"'/\1.cs3"|g' builds/plugins.json
 
-      # Corrige URLs internas do plugins.json (.jar)  
-      sed -i -E 's|"jarUrl": "[^"]*/([^/]+)\.jar"|"jarUrl": "'"$REPO_BASE_URL_ESCAPED"'/\1.jar"|g' builds/plugins.json  
+          # Corrige URLs internas do plugins.json (.jar)
+          sed -i -E 's|"jarUrl": "[^"]*/([^/]+)\.jar"|"jarUrl": "'"$REPO_BASE_URL_ESCAPED"'/\1.jar"|g' builds/plugins.json
 
-      # Cria repo.json final  
-      echo "{  
-        \"name\": \"lietrepo\",  
-        \"iconUrl\": \"https:\/\/github.com\/lawlietbr.png\",  
-        \"description\": \"Repositório BR do CloudStream\",  
-        \"manifestVersion\": 1,  
-        \"pluginLists\": $PLUGINS_LIST  
-      }" > builds/repo.json  
+          # Cria repo.json final
+          echo "{
+            \"name\": \"lietrepo\",
+            \"iconUrl\": \"https:\/\/github.com\/lawlietbr.png\",
+            \"description\": \"Repositório BR do CloudStream\",
+            \"manifestVersion\": 1,
+            \"pluginLists\": $PLUGINS_LIST
+          }" > builds/repo.json
 
-      # Copia os arquivos compilados  
-      find . -type f -name "*.cs3" -exec cp {} builds/ \; || true  
-      find . -type f -name "*.jar" -exec cp {} builds/ \; || true  
+          # Copia os arquivos compilados
+          find . -type f -name "*.cs3" -exec cp {} builds/ \; || true
+          find . -type f -name "*.jar" -exec cp {} builds/ \; || true
 
-  # 6. DEPLOY (COMMIT AUTOMÁTICO)  
-  - name: Commit providers to main  
-    uses: stefanzweifel/git-auto-commit-action@v5  
-    with:  
-      commit_message: "Deploy: lietrepo"  
-      branch: main  
-      file_pattern: builds/*
+      # 6. DEPLOY (COMMIT AUTOMÁTICO)
+      - name: Commit providers to main
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Deploy: lietrepo"
+          branch: main
+          file_pattern: builds/*

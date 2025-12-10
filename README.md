@@ -21,7 +21,7 @@ O que você encontra aqui de melhor no CloudStream:
 - 🎬 **TMDB Turbinado** — posters em Full HD, trailers, sinopses, elenco completo e tudo que deixa o app visualmente impecável.  
 - ⏭️ **Anime Skip** — pode pular aquela abertura que você já viu 89 vezes.  
 - ⚡ **Provedores rápidos e estáveis** que não travam sua diversão.  
-- 💬 **Sugestões? Manda!** Eu juro que leio tudo.  
+- 💬 **Sugestões? Manda!** Eu leio tudo.  
 - 😎 **Objetivo: maximizar o entretenimento** (porque a vida já é estressante demais).
 
 ---

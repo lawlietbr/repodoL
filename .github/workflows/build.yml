@@ -1,83 +1,84 @@
-name: Build SuperFlix (Clean)
+name: Build e Release
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+on: workflow_dispatch
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. CHECKOUT (silencioso)
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           
-      # 2. BUILD (apenas erros)
-      - name: Compilar plugin
+      - name: Setup
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          
+      - name: Compilar
+        id: compile
         run: |
-          echo "🔨 Compilando..."
           chmod +x gradlew
           
-          # Build com output filtrado
-          ./gradlew :SuperFlix:assembleDebug \
-            --no-daemon \
-            --quiet \
-            2>&1 | tee /tmp/build.log
+          # Build com output completo para arquivo
+          ./gradlew :SuperFlix:assembleDebug --stacktrace > build.log 2>&1 || true
           
-          # Verifica se passou ou falhou
-          if grep -q "BUILD SUCCESSFUL" /tmp/build.log; then
-            echo "✅ Build bem-sucedido"
+          # Verifica resultado
+          if grep -q "BUILD SUCCESSFUL" build.log; then
+            echo "✅ Build OK"
             
-            # Encontra o .cs3
-            CS3_FILE=$(find . -name "*.cs3" -type f | head -1)
-            if [ -f "$CS3_FILE" ]; then
-              echo "📦 Plugin: $(basename "$CS3_FILE")"
-              echo "📏 Tamanho: $(ls -lh "$CS3_FILE" | awk '{print $5}')"
-            fi
+            # Encontra arquivo
+            file=$(find . -name "*.cs3" -type f | head -1)
+            echo "filename=$(basename "$file")" >> $GITHUB_OUTPUT
+            echo "filepath=$file" >> $GITHUB_OUTPUT
+            
+            # Mostra resumo limpo
+            echo "📦 Plugin: $(basename "$file")"
           else
-            echo "❌ Build falhou!"
+            echo "❌ Build falhou"
+            echo ""
             echo "=== ERROS ==="
-            grep -E "error:|FAILURE|exception|✗|❌|^e: " /tmp/build.log | head -15
+            grep -E "^e: |error:|FAILED|✗|❌" build.log | head -20
             exit 1
           fi
           
-      # 3. CRIAR ARQUIVOS (silencioso)
-      - name: Criar arquivos
+      - name: Criar release
         if: success()
         run: |
           mkdir -p dist
           
-          # Copia .cs3
-          CS3_FILE=$(find . -name "*.cs3" -type f | head -1)
-          cp "$CS3_FILE" "dist/SuperFlix.cs3"
+          # Copia arquivo
+          cp "${{ steps.compile.outputs.filepath }}" "dist/SuperFlix.cs3"
           
-          # JSONs mínimos
-          echo '{"name":"SuperFlix Repo","pluginLists":["https://raw.githubusercontent.com/'${{ github.repository }}'/main/dist/plugins.json"]}' > dist/repo.json
-          echo '[{"name":"SuperFlix","url":"https://raw.githubusercontent.com/'${{ github.repository }}'/main/dist/SuperFlix.cs3"}]' > dist/plugins.json
+          # JSONs
+          cat > dist/plugins.json << EOF
+          [
+            {
+              "name": "SuperFlix",
+              "url": "https://raw.githubusercontent.com/${{ github.repository }}/main/dist/SuperFlix.cs3"
+            }
+          ]
+          EOF
           
-      # 4. COMMIT (silencioso)
+          echo '{"name":"SuperFlix","pluginLists":["https://raw.githubusercontent.com/'${{ github.repository }}'/main/dist/plugins.json"]}' > dist/repo.json
+          
       - name: Commitar
         if: success()
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add dist/
-          git commit -m "📦 $(date +'%H:%M')" -q
-          git push -q
+          git commit -m "📦 $(date +'%H:%M:%S')"
+          git push
           
-      # 5. RESULTADO (apenas sucesso)
       - name: Resultado
         if: success()
         run: |
           echo ""
-          echo "🎉 BUILD COMPLETO!"
+          echo "🎯 BUILD COMPLETO!"
           echo ""
-          echo "🔗 URL DO PLUGIN:"
+          echo "🔗 INSTALAR:"
           echo "https://raw.githubusercontent.com/${{ github.repository }}/main/dist/SuperFlix.cs3"
-          echo ""
-          echo "📱 Para instalar:"
-          echo "CloudStream → Configurações → Extensões → Instalar de URL"

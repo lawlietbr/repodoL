@@ -8,7 +8,8 @@ import com.lagradost.cloudstream3.app
 import org.jsoup.nodes.Element
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.text.SimpleDateFormat
-import com.lagradost.cloudstream3.BuildConfig
+import com.lietrepo.superflix.BuildConfig
+
 
 
 class SuperFlix : MainAPI() {

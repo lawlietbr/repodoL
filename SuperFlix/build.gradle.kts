@@ -20,7 +20,7 @@ android {
         buildConfigField(
             "String",
             "TMDB_API_KEY",
-            "\"${System.getenv("TMDB_API_KEY") ?: ""}\""
+             "\"" + (System.getenv("TMDB_API_KEY") ?: "") + "\""
         )
     }
 }

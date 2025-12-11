@@ -78,3 +78,8 @@ jobs:
           commit_message: "Deploy: lietrepo"
           branch: main
           file_pattern: builds/*
+
+- name: Debug env
+  run: echo "TMDB está definida? -> ${TMDB_API_KEY:+sim}"
+  env:
+    TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}

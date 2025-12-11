@@ -18,7 +18,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. SETUP JAVA
+      # 2. DEBUG: Verificar secrets
+      - name: Debug - Verificar Secrets
+        run: |
+          echo "=== DEBUG SECRETS ==="
+          echo "TMDB_API_KEY está definida? ${{ secrets.TMDB_API_KEY != '' }}"
+          echo "Primeiros caracteres do TMDB_API_KEY: ${{ secrets.TMDB_API_KEY != '' && format('{0}***', secrets.TMDB_API_KEY[0, 4]) || 'NÃO DEFINIDA' }}"
+          echo "Tamanho da chave: ${{ secrets.TMDB_API_KEY != '' && length(secrets.TMDB_API_KEY) || 0 }}"
+          echo "=== FIM DEBUG ==="
+
+      # 3. SETUP JAVA
       - name: Set up JDK 17
         uses: actions/setup-java@v4 
         with:
@@ -29,36 +38,113 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 3. BUILD
+      # 4. DEBUG: Verificar ambiente antes do build
+      - name: Debug - Verificar variáveis de ambiente
+        run: |
+          echo "=== DEBUG VARIÁVEIS DE AMBIENTE ==="
+          echo "TMDB_API_KEY (env): $TMDB_API_KEY"
+          echo "TMDB_API_KEY definida? $([ -z "$TMDB_API_KEY" ] && echo 'NÃO' || echo 'SIM')"
+          echo "Tamanho: ${#TMDB_API_KEY}"
+          echo "Valor completo (oculto): $([ -z "$TMDB_API_KEY" ] && echo 'VAZIA' || echo "${TMDB_API_KEY:0:8}...${TMDB_API_KEY: -4}")"
+          echo "=== FIM DEBUG ==="
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+
+      # 5. DEBUG: Verificar arquivo local.properties
+      - name: Debug - Verificar configurações locais
+        run: |
+          echo "=== DEBUG ARQUIVOS CONFIG ==="
+          echo "Local.properties existe?"
+          if [ -f "local.properties" ]; then
+            echo "SIM"
+            echo "Conteúdo de local.properties:"
+            cat local.properties
+          else
+            echo "NÃO"
+            echo "Criando local.properties de exemplo..."
+            echo "# Chave API TMDB" > local.properties
+            echo "# Descomente e adicione sua chave:" >> local.properties
+            echo "# TMDB_API_KEY=sua_chave_aqui" >> local.properties
+            cat local.properties
+          fi
+          echo "=== FIM DEBUG ==="
+
+      # 6. BUILD com debug
       - name: Build with Gradle
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-        run: ./gradlew assemble --refresh-dependencies --info --stacktrace
+        run: |
+          echo "=== INICIANDO BUILD GRADLE ==="
+          echo "TMDB_API_KEY no build: $([ -z "$TMDB_API_KEY" ] && echo 'VAZIA' || echo 'DEFINIDA')"
+          
+          # Verificar se gradle recebe a variável
+          ./gradlew printProperties --info 2>&1 | grep -i tmdb || true
+          
+          # Build principal
+          echo "Executando build..."
+          ./gradlew assemble --refresh-dependencies --info --stacktrace
+          
+          echo "=== BUILD COMPLETO ==="
 
-      # 4. GERAÇÃO DOS MANIFESTOS
+      # 7. DEBUG: Verificar arquivos gerados
+      - name: Debug - Verificar BuildConfig gerado
+        run: |
+          echo "=== DEBUG BUILDCONFIG ==="
+          
+          # Procurar por BuildConfig gerado
+          find . -name "*BuildConfig.java" -type f | while read file; do
+            echo "Arquivo encontrado: $file"
+            echo "Conteúdo:"
+            grep -n "TMDB" "$file" || echo "Nenhuma referência ao TMDB encontrada"
+          done
+          
+          echo "=== FIM DEBUG ==="
+
+      # 8. GERAÇÃO DOS MANIFESTOS
       - name: Generate plugins.json
-        run: ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
+        run: |
+          echo "=== GERANDO PLUGINS.JSON ==="
+          ./gradlew makePluginsJson -PoutputFile="build/plugins.json" --info
+          echo "plugins.json gerado"
+          echo "=== FIM ==="
 
-      # 5. CRIAÇÃO DO REPO + CORREÇÃO DE URLs
+      # 9. CRIAÇÃO DO REPO + CORREÇÃO DE URLs
       - name: Move, Fix URLs and Create repo.json
         run: |
+          echo "=== CRIANDO REPOSITÓRIO ==="
+          
           # Base RAW do GitHub para downloads
           REPO_BASE_URL="https://github.com/${{ github.repository }}/raw/refs/heads/main/builds"
           PLUGINS_LIST="[\"$REPO_BASE_URL/plugins.json\"]"
 
+          echo "REPO_BASE_URL: $REPO_BASE_URL"
+          
           mkdir -p builds
           mv build/plugins.json builds/plugins.json
 
+          # Verificar plugins.json
+          echo "Conteúdo do plugins.json:"
+          head -50 builds/plugins.json
+          echo "..."
+
           # Escapa a URL para uso no sed
           REPO_BASE_URL_ESCAPED=$(echo $REPO_BASE_URL | sed 's/\//\\\//g')
+          echo "REPO_BASE_URL_ESCAPED: $REPO_BASE_URL_ESCAPED"
 
           # Corrige URLs internas do plugins.json (.cs3)
+          echo "Corrigindo URLs .cs3..."
           sed -i -E 's|"url": "[^"]*/([^/]+)\.cs3"|"url": "'"$REPO_BASE_URL_ESCAPED"'/\1.cs3"|g' builds/plugins.json
 
           # Corrige URLs internas do plugins.json (.jar)
+          echo "Corrigindo URLs .jar..."
           sed -i -E 's|"jarUrl": "[^"]*/([^/]+)\.jar"|"jarUrl": "'"$REPO_BASE_URL_ESCAPED"'/\1.jar"|g' builds/plugins.json
 
+          # Verificar correções
+          echo "URLs corrigidas no plugins.json:"
+          grep -n "url" builds/plugins.json | head -10
+
           # Cria repo.json final
+          echo "Criando repo.json..."
           echo "{
             \"name\": \"lietrepo\",
             \"iconUrl\": \"https://github.com/lawlietbr.png\",
@@ -67,16 +153,44 @@ jobs:
             \"pluginLists\": $PLUGINS_LIST
           }" > builds/repo.json
 
-          # Copia os arquivos compilados
-          find . -type f -name "*.cs3" -exec cp {} builds/ \; || true
-          find . -type f -name "*.jar" -exec cp {} builds/ \; || true
+          echo "Conteúdo do repo.json:"
+          cat builds/repo.json
 
-      # 6. DEPLOY (COMMIT AUTOMÁTICO)
+          # Copia os arquivos compilados
+          echo "Copiando arquivos compilados..."
+          find . -type f -name "*.cs3" -exec echo "Copiando: {}" \; -exec cp {} builds/ \; || true
+          find . -type f -name "*.jar" -exec echo "Copiando: {}" \; -exec cp {} builds/ \; || true
+
+          echo "Arquivos em builds/:"
+          ls -la builds/
+          
+          echo "=== REPOSITÓRIO CRIADO ==="
+
+      # 10. DEBUG: Verificar conteúdo do plugin
+      - name: Debug - Verificar plugin compilado
+        run: |
+          echo "=== DEBUG PLUGIN COMPILADO ==="
+          
+          # Encontrar o plugin SuperFlix
+          PLUGIN_FILE=$(find builds -name "*SuperFlix*.cs3" | head -1)
+          
+          if [ -n "$PLUGIN_FILE" ]; then
+            echo "Plugin encontrado: $PLUGIN_FILE"
+            echo "Tamanho: $(stat -c%s "$PLUGIN_FILE") bytes"
+            
+            # Extrair strings do plugin para verificar se a chave está lá
+            echo "Buscando referências à TMDB no plugin..."
+            strings "$PLUGIN_FILE" | grep -i "tmdb\|api_key" | head -20 || true
+          else
+            echo "Nenhum plugin SuperFlix encontrado!"
+          fi
+          
+          echo "=== FIM DEBUG ==="
+
+      # 11. DEPLOY (COMMIT AUTOMÁTICO)
       - name: Commit providers to main
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Deploy: lietrepo"
+          commit_message: "Deploy: lietrepo com debug"
           branch: main
           file_pattern: builds/*
-
-      

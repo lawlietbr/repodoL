@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
+   build:
+      runs-on: ubuntu-latest
+      permissions:
       contents: write
 
-    steps:
+   steps:
       # 1. CHECKOUT
       - uses: actions/checkout@v4
         with:

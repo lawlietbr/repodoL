@@ -1,18 +1,92 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-**/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-.vscodetest.txt
+# ============================================
+# ARQUIVOS SENSÍVEIS (NÃO VERSIONAR NUNCA!)
+# ============================================
+
+# Config.kt GERADO (contém a chave real) - CRÍTICO!
 SuperFlix/src/main/kotlin/com/SuperFlix/Config.kt
-*.template.backup
-SuperFlix/build/
+
+# Arquivos de ambiente local
+local.properties
+*.env
+.env.local
+
+# Chaves e credenciais
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.cer
+
+# ============================================
+# ARQUIVOS DO ANDROID STUDIO / INTELLIJ
+# ============================================
+
+# Intellij
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# Android Studio
 .gradle/
 build/
+**/build/
+captures/
+
+# VS Code
+.vscode/
+.vscodetest.txt
+
+# ============================================
+# ARQUIVOS DO SISTEMA
+# ============================================
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================
+# ARQUIVOS DE BUILD / CACHE
+# ============================================
+
+# Gradle
+.gradle/
+**/build/
+
+# Android
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Output do CloudStream
+*.cs3
+**/*.cs3
+
+# ============================================
+# TEMPORÁRIOS / BACKUPS
+# ============================================
+
+# Backups de templates
+*.template.bak
+*.template.backup
+Config.kt.bak
+
+# Logs
+*.log
+logs/
+
+# Temporários
+tmp/
+temp/

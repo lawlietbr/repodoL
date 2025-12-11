@@ -198,3 +198,15 @@ jobs:
           done
           
           echo "=== FIM DEBUG ==="
+     - name: Debug - Verificar código do Gradle
+  run: |
+    echo "=== CÓDIGO DO BUILD.GRADLE.KTS ==="
+    cat ./SuperFlix/build.gradle.kts
+    
+    echo ""
+    echo "=== BUSCANDO POR '***' NO CÓDIGO ==="
+    grep -n "\*\*\*" ./SuperFlix/build.gradle.kts || echo "Não encontrado"
+    
+    echo ""
+    echo "=== BUSCANDO POR 'buildConfigField' ==="
+    grep -n "buildConfigField" ./SuperFlix/build.gradle.kts

@@ -9,14 +9,18 @@ cloudstream {
     iconUrl = "https://superflix21.lol/assets/logo.png"
 }
 
-android.buildFeatures.buildConfig = true
-
 android {
+    compileSdk = 34 
+    buildFeatures.buildConfig = true
+
+    namespace = "com.lietrepo.superflix"
     defaultConfig {
+        minSdk = 21
+
         buildConfigField(
             "String",
             "TMDB_API_KEY",
-            "\"${System.getenv("TMDB_API_KEY")}\""  
+            "\"${System.getenv("TMDB_API_KEY")}\""
         )
-     }
+    }
 }

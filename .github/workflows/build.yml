@@ -1,4 +1,4 @@
-Name: Build do L
+name: Build do L
 
 on:
   push:

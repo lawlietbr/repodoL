@@ -3,7 +3,7 @@ name: Build SuperFlix
 on:
   workflow_dispatch:
   push:
-    branches: -main # CORRIGIDO!
+    branches: -main
 
 jobs:
   build:
@@ -32,39 +32,27 @@ jobs:
           
       - name: Criar repositório
         run: |
-          REPO_BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/builds"
-          PLUGINS_LIST="[\"$REPO_BASE_URL/plugins.json\"]"
-          
           mkdir -p builds
           
           if [ -f "build/plugins.json" ]; then
-            mv build/plugins.json builds/plugins.json
+            cp build/plugins.json builds/plugins.json
           fi
           
-          REPO_BASE_URL_ESCAPED=$(echo "$REPO_BASE_URL" | sed 's/[&/\]/\\&/g')
-          sed -i.bak "s|\"url\": \"[^\"]*/([^/]+)\.cs3\"|\"url\": \"$REPO_BASE_URL_ESCAPED/\1.cs3\"|g" builds/plugins.json
-          sed -i.bak "s|\"jarUrl\": \"[^\"]*/([^/]+)\.jar\"|\"jarUrl\": \"$REPO_BASE_URL_ESCAPED/\1.jar\"|g" builds/plugins.json
+          # Corrigir URLs
+          BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/builds"
+          sed -i "s|\"url\": \".*\.cs3\"|\"url\": \"$BASE_URL/SuperFlix.cs3\"|g" builds/plugins.json
           
-          # ✅ CORRIGIDO: EOF sem indentação!
-          cat > builds/repo.json << 'EOF'
-{
-  "name": "lietrepo",
-  "iconUrl": "https://github.com/lawlietbr.png",
-  "description": "Repositório BR do CloudStream",
-  "manifestVersion": 1,
-  "pluginLists": ["https://raw.githubusercontent.com/${{ github.repository }}/main/builds/plugins.json"]
-}
-EOF
+          # Criar repo.json SIMPLES
+          echo '{"name":"SuperFlix","pluginLists":["'"$BASE_URL/plugins.json"'"]}' > builds/repo.json
           
       - name: Copiar arquivos
         run: |
-          find . -type f -name "*.cs3" -exec cp {} builds/ \; 2>/dev/null || true
-          find . -type f -name "*.jar" -exec cp {} builds/ \; 2>/dev/null || true
+          find . -name "*.cs3" -type f -exec cp {} builds/ \;
           
       - name: Commit e push
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add builds/
-          git commit -m "🚀 Build"
+          git commit -m "build"
           git push

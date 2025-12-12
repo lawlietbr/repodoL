@@ -49,18 +49,18 @@ class SuperFlix : TmdbProvider() {
         
         println("🎯 [DEBUG] Tipo detectado: Anime=$isAnime, Série=$isSerie")
         
+        val posterUrl = this.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
+        println("📸 [DEBUG] Poster URL: $posterUrl")
+        
         val result = when {
             isAnime -> newAnimeSearchResponse(title, fixUrl(href), TvType.Anime) {
-                this.posterUrl = this@toSearchResult.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
-                println("📸 [DEBUG] Poster URL: ${this.posterUrl}")
+                this.posterUrl = posterUrl
             }
             isSerie -> newTvSeriesSearchResponse(title, fixUrl(href), TvType.TvSeries) {
-                this.posterUrl = this@toSearchResult.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
-                println("📸 [DEBUG] Poster URL: ${this.posterUrl}")
+                this.posterUrl = posterUrl
             }
             else -> newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
-                this.posterUrl = this@toSearchResult.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
-                println("📸 [DEBUG] Poster URL: ${this.posterUrl}")
+                this.posterUrl = posterUrl
             }
         }
         
@@ -88,15 +88,17 @@ class SuperFlix : TmdbProvider() {
             
             println("🎯 [DEBUG] Tipo: Anime=$isAnime, Série=$isSerie")
             
+            val posterUrl = card.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
+            
             val result = when {
                 isAnime -> newAnimeSearchResponse(title, fixUrl(href), TvType.Anime) {
-                    this.posterUrl = card.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
+                    this.posterUrl = posterUrl
                 }
                 isSerie -> newTvSeriesSearchResponse(title, fixUrl(href), TvType.TvSeries) {
-                    this.posterUrl = card.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
+                    this.posterUrl = posterUrl
                 }
                 else -> newMovieSearchResponse(title, fixUrl(href), TvType.Movie) {
-                    this.posterUrl = card.selectFirst("img")?.attr("src")?.let { fixUrl(it) }
+                    this.posterUrl = posterUrl
                 }
             }
             
@@ -231,8 +233,9 @@ class SuperFlix : TmdbProvider() {
                     
                     // Pode adicionar sinopse do site se quiser
                     val descElement = element.selectFirst(".ep-desc, .description")
-                    descElement?.text()?.trim()?.let { desc ->
-                        if (desc.isNotBlank()) {
+                    descElement?.let { 
+                        val desc = it.text()?.trim()
+                        if (!desc.isNullOrBlank()) {
                             this.description = desc
                             println("📝 [DEBUG] Sinopse do episódio: ${desc.take(50)}...")
                         }
@@ -294,7 +297,8 @@ class SuperFlix : TmdbProvider() {
         
         // 2. Tentar classe ep-number
         val epNumberElement = element.selectFirst(".ep-number, .number, .episode-number")
-        epNumberElement?.text()?.let { epNumberText ->
+        epNumberElement?.let { 
+            val epNumberText = it.text()
             if (epNumberText.isNotBlank()) {
                 val num = epNumberText.toIntOrNull()
                 if (num != null) {
@@ -381,16 +385,16 @@ class SuperFlix : TmdbProvider() {
         
         // 2. Tentar iframe
         val iframe = document.selectFirst("iframe[src*='fembed'], iframe[src*='filemoon'], iframe[src*='player'], iframe[src*='embed']")
-        if (iframe != null) {
-            val url = iframe.attr("src")
+        iframe?.let {
+            val url = it.attr("src")
             println("✅ [DEBUG] Player URL encontrado no iframe: $url")
             return url
         }
         
         // 3. Tentar links diretos
         val videoLink = document.selectFirst("a[href*='.m3u8'], a[href*='.mp4'], a[href*='watch']")
-        if (videoLink != null) {
-            val url = videoLink.attr("href")
+        videoLink?.let {
+            val url = it.attr("href")
             println("✅ [DEBUG] Player URL encontrado no link: $url")
             return url
         }

@@ -46,14 +46,14 @@ jobs:
           sed -i.bak "s|\"jarUrl\": \"[^\"]*/([^/]+)\.jar\"|\"jarUrl\": \"$REPO_BASE_URL_ESCAPED/\1.jar\"|g" builds/plugins.json
           
           cat > builds/repo.json << EOF
-{
+            {
   "name": "lietrepo",
   "iconUrl": "https://github.com/lawlietbr.png",
   "description": "Repositório BR do CloudStream",
   "manifestVersion": 1,
   "pluginLists": $PLUGINS_LIST
-}
-EOF
+                     }
+                    EOF
           
       - name: Copiar arquivos
         run: |

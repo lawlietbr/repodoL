@@ -1,58 +1,117 @@
-name: Build SuperFlix
+name: Build do L
 
 on:
-  workflow_dispatch:
   push:
-    branches: -main
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write # Permissão de escrita para o deploy
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 1. CHECKOUT
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Setup Java
-        uses: actions/setup-java@v3
+
+      # 2. SETUP JAVA/GRADLE
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
+          java-version: '17'
           distribution: 'temurin'
-          java-version: '11'
-          
-      - name: Build plugin
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # BUILD
+      - name: Build with Gradle (Apenas erros e arquivos)
         run: |
-          chmod +x gradlew
-          ./gradlew :SuperFlix:assembleDebug
-          
-      - name: Gerar plugins.json
+          if ./gradlew assemble --refresh-dependencies --stacktrace 2>&1 | \
+             grep -E '^e:|file|FAILED|BUILD FAILED|error|ERROR'; then
+            echo "Build failed with errors shown above"
+            exit 1
+          else
+            echo "Build completed successfully"
+            ./gradlew assemble --refresh-dependencies --stacktrace 2>&1 | \
+              tail -5 | grep -E 'BUILD SUCCESSFUL|BUILD FAILED' || true
+          fi
+
+      # 3. GERAÇÃO DO MANIFESTO DE PROVEDORES
+      - name: Generate plugins.json at correct path
         run: |
-          ./gradlew makePluginsJson -PoutputFile="build/plugins.json"
+          # Executa e filtra a saída
+          ./gradlew makePluginsJson -PoutputFile="build/plugins.json" 2>&1 | \
+            grep -E '^e:|file|FAILED|error|ERROR' || true
           
-      - name: Criar repositório
-        run: |
-          mkdir -p builds
           
           if [ -f "build/plugins.json" ]; then
-            cp build/plugins.json builds/plugins.json
+            echo " plugins.json generated successfully"
+          else
+            echo "Failed to generate plugins.json"
+            exit 1
           fi
-          
-          # Corrigir URLs
-          BASE_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/builds"
-          sed -i "s|\"url\": \".*\.cs3\"|\"url\": \"$BASE_URL/SuperFlix.cs3\"|g" builds/plugins.json
-          
-          # Criar repo.json SIMPLES
-          echo '{"name":"SuperFlix","pluginLists":["'"$BASE_URL/plugins.json"'"]}' > builds/repo.json
-          
-      - name: Copiar arquivos
+
+      # 4. CRIAÇÃO DA ESTRUTURA FINAL E CORREÇÃO DE URL
+      - name: Mover, Corrigir URLs Internas e Criar repo.json principal
         run: |
-          find . -name "*.cs3" -type f -exec cp {} builds/ \;
-          
-      - name: Commit e push
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add builds/
-          git commit -m "build"
-          git push
+          REPO_BASE_URL="https://github.com/${{ github.repository }}/raw/refs/heads/main/builds"
+          PLUGINS_LIST="[\"$REPO_BASE_URL/plugins.json\"]"
+
+          echo "Creating builds directory..."
+          mkdir -p builds
+
+          echo "📄 Moving plugins.json..."
+          if [ -f "build/plugins.json" ]; then
+            mv build/plugins.json builds/plugins.json
+            echo " plugins.json moved"
+          else
+            echo "plugins.json not found in build/"
+            exit 1
+          fi
+
+          echo "🔗 Fixing URLs in plugins.json..."
+          # ESCAPA a URL de base para uso no comando SED
+          REPO_BASE_URL_ESCAPED=$(echo $REPO_BASE_URL | sed 's/\//\\\//g')
+
+          # Substitui a URL do .cs3
+          sed -i -E 's|"url": "[^"]*/([^/]+)\.cs3"|"url": "'"$REPO_BASE_URL_ESCAPED"'/\1.cs3"|g' builds/plugins.json
+          echo "CS3 URLs fixed"
+
+          # Substitui a URL do .jar
+          sed -i -E 's|"jarUrl": "[^"]*/([^/]+)\.jar"|"jarUrl": "'"$REPO_BASE_URL_ESCAPED"'/\1.jar"|g' builds/plugins.json
+          echo "JAR URLs fixed"
+
+          echo " Creating main repo.json..."
+          echo "{
+            \"name\": \"CloudStream Brasil Repo\",
+            \"description\": \"Repositório Brasileiro de Provedores CloudStream\",
+            \"manifestVersion\": 1,
+            \"pluginLists\": $PLUGINS_LIST
+          }" > builds/repo.json
+          echo " repo.json created"
+
+          echo "Copying build files..."
+          # Copia .cs3 files
+          CS3_COUNT=$(find . -type f -name "*.cs3" -exec cp {} builds/ \; -exec echo "  Copied: {}" \; | wc -l)
+          echo "Copied $CS3_COUNT .cs3 files"
+
+          # Copia .jar files
+          JAR_COUNT=$(find . -type f -name "*.jar" -exec cp {} builds/ \; -exec echo "  Copied: {}" \; | wc -l)
+          echo "Copied $JAR_COUNT .jar files"
+
+          echo "Summary of builds directory:"
+          ls -la builds/ | grep -E '\.(cs3|jar|json)$'
+
+      # 5. DEPLOY FINAL
+      - name: Commit Providers to main branch
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Deploy: Minor Fixings"
+          branch: main
+          file_pattern: builds/*

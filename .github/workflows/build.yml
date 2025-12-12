@@ -1,4 +1,4 @@
-name: Build e Deploy
+ name: Build e Deploy
 
 on: workflow_dispatch
 

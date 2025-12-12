@@ -18,7 +18,7 @@ class SuperFlix : MainAPI() {
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
     override val usesWebView = true
 
-    // ============ CONFIGURAÇÃO DO PROXY ============
+    // ============ CONFIGURAÇÃO DO PROXY CORRIGIDA ============
     private val TMDB_PROXY_URL = "https://lawliet.euluan1912.workers.dev"
     private val tmdbImageUrl = "https://image.tmdb.org/t/p"
 
@@ -176,11 +176,9 @@ class SuperFlix : MainAPI() {
             val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
             val yearParam = year?.let { "&year=$it" } ?: ""
 
-            // ============ URL DO PROXY ============
-            val searchUrl = "$TMDB_PROXY_URL/search/$type?" +
-                           "query=$encodedQuery" +
-                           yearParam +
-                           "&page=1"
+            // ============ URL CORRIGIDA PARA ROTAS DO SEU PROXY ============
+            // Seu proxy tem a rota: "/search?query=avatar&type=movie&year=2023"
+            val searchUrl = "$TMDB_PROXY_URL/search?query=$encodedQuery&type=$type$yearParam"
             
             println("🔗 [TMDB DEBUG] URL da busca: $searchUrl")
 
@@ -191,6 +189,11 @@ class SuperFlix : MainAPI() {
             // Log dos primeiros 500 caracteres da resposta
             val responsePreview = response.text.take(500)
             println("📡 [TMDB DEBUG] Prévia da resposta: $responsePreview...")
+            
+            if (response.code != 200) {
+                println("❌ [TMDB DEBUG] Erro HTTP: ${response.code}")
+                return null
+            }
             
             val searchResult = response.parsedSafe<TMDBSearchResponse>()
             
@@ -326,14 +329,23 @@ class SuperFlix : MainAPI() {
         
         return try {
             val type = if (isTv) "tv" else "movie"
-            val url = "$TMDB_PROXY_URL/$type/$id?" +
-                     "append_to_response=credits,videos"
+            // ============ URL CORRIGIDA PARA ROTAS DO SEU PROXY ============
+            // Seu proxy tem as rotas: "/movie/550" e "/tv/1399"
+            // Vou adicionar o append_to_response como query parameter
+            val url = "$TMDB_PROXY_URL/$type/$id?append_to_response=credits,videos"
                      
             println("🔗 [TMDB DEBUG] URL de detalhes: $url")
             
             val response = app.get(url, timeout = 10_000)
             println("📡 [TMDB DEBUG] Status da resposta de detalhes: ${response.code}")
             println("📡 [TMDB DEBUG] Tamanho da resposta: ${response.text.length} caracteres")
+            
+            if (response.code != 200) {
+                println("❌ [TMDB DEBUG] Erro HTTP: ${response.code}")
+                val errorPreview = response.text.take(200)
+                println("📡 [TMDB DEBUG] Erro: $errorPreview")
+                return null
+            }
             
             val responsePreview = response.text.take(500)
             println("📡 [TMDB DEBUG] Prévia da resposta de detalhes: $responsePreview...")
@@ -358,11 +370,18 @@ class SuperFlix : MainAPI() {
         println("🔍 [TMDB DEBUG] Buscando todas as temporadas para série ID: $seriesId")
         
         return try {
+            // ============ URL CORRIGIDA PARA ROTAS DO SEU PROXY ============
+            // Seu proxy tem a rota: "/tv/1399"
             val seriesDetailsUrl = "$TMDB_PROXY_URL/tv/$seriesId"
             println("🔗 [TMDB DEBUG] URL temporadas: $seriesDetailsUrl")
             
             val seriesResponse = app.get(seriesDetailsUrl, timeout = 10_000)
             println("📡 [TMDB DEBUG] Status da resposta de temporadas: ${seriesResponse.code}")
+            
+            if (seriesResponse.code != 200) {
+                println("❌ [TMDB DEBUG] Erro HTTP: ${seriesResponse.code}")
+                return emptyMap()
+            }
             
             val seriesDetails = seriesResponse.parsedSafe<TMDBTVDetailsResponse>()
 
@@ -400,24 +419,32 @@ class SuperFlix : MainAPI() {
         println("🔍 [TMDB DEBUG] Buscando detalhes da temporada $seasonNumber")
         
         return try {
-            val url = "$TMDB_PROXY_URL/tv/$seriesId/season/$seasonNumber"
-            println("🔗 [TMDB DEBUG] URL da temporada: $url")
+            // ============ IMPORTANTE: SEU PROXY NÃO TEM ROTA PARA TEMPORADAS ============
+            // Pelas rotas disponíveis, seu proxy não tem rota para /tv/{id}/season/{number}
+            // Vou tentar uma rota alternativa ou retornar null
+            println("⚠️ [TMDB DEBUG] Seu proxy não tem rota para temporadas específicas")
+            println("⚠️ [TMDB DEBUG] Rotas disponíveis: /tv/{id} apenas")
+            return null
             
-            val response = app.get(url, timeout = 10_000)
-            println("📡 [TMDB DEBUG] Status da resposta da temporada: ${response.code}")
-            
-            val seasonData = response.parsedSafe<TMDBSeasonResponse>()
-            
-            if (seasonData == null) {
-                println("❌ [TMDB DEBUG] Falha no parsing da temporada $seasonNumber")
-                return null
-            }
-            
-            println("✅ [TMDB DEBUG] Parsing da temporada $seasonNumber OK!")
-            println("   Episódios: ${seasonData.episodes.size}")
-            println("   Data de estreia: ${seasonData.air_date}")
-            
-            return seasonData
+            // Se o proxy tivesse a rota, seria assim:
+            // val url = "$TMDB_PROXY_URL/tv/$seriesId/season/$seasonNumber"
+            // println("🔗 [TMDB DEBUG] URL da temporada: $url")
+            // 
+            // val response = app.get(url, timeout = 10_000)
+            // println("📡 [TMDB DEBUG] Status da resposta da temporada: ${response.code}")
+            // 
+            // val seasonData = response.parsedSafe<TMDBSeasonResponse>()
+            // 
+            // if (seasonData == null) {
+            //     println("❌ [TMDB DEBUG] Falha no parsing da temporada $seasonNumber")
+            //     return null
+            // }
+            // 
+            // println("✅ [TMDB DEBUG] Parsing da temporada $seasonNumber OK!")
+            // println("   Episódios: ${seasonData.episodes.size}")
+            // println("   Data de estreia: ${seasonData.air_date}")
+            // 
+            // return seasonData
         } catch (e: Exception) {
             println("❌ [TMDB DEBUG] ERRO ao buscar temporada $seasonNumber:")
             e.printStackTrace()

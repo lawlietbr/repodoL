@@ -1,5 +1,6 @@
 {
-  "name": "lawlietrepo",
+  "name": "lietrepo",
+  "iconUrl": "https://github.com/lawlietbr.png",
   "description": "Repositório Brasileiro para o Cloudstream",
   "manifestVersion": 1,
   "pluginLists": ["https://github.com/lawlietbr/lietrepo/raw/refs/heads/main/builds/plugins.json"]

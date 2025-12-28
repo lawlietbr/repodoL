@@ -60,7 +60,7 @@ fun getLocalProperty(key: String): String? {
 }
 
 cloudstream {
-    version = 1
+    version = 2
     description = "SuperFlix - Filmes e Séries em Português"
     language = "pt-br"
     authors = listOf("lawlietbr")

@@ -5,8 +5,11 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class SuperFlixProviderPlugin: Plugin() {
+class SuperFlixProvider : Plugin() {
     override fun load(context: Context) {
+        
         registerMainAPI(SuperFlix())
+
+        registerExtractorAPI(YouTubeTrailerExtractor())
     }
 }

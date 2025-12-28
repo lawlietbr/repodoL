@@ -25,7 +25,6 @@ class SuperFlix : MainAPI() {
     companion object {
         private const val SEARCH_PATH = "/buscar"
 
-        // ✅ ABAS FIXAS ATUALIZADAS
         private val FIXED_CATEGORIES = listOf(
             "/lancamentos" to "Lançamentos",
             "/filmes" to "Últimos Filmes",
@@ -33,7 +32,6 @@ class SuperFlix : MainAPI() {
             "/animes" to "Últimos Animes"
         )
 
-        // ✅ CATEGORIAS ALEATÓRIAS COM NOMES CORRIGIDOS
         private val ALL_RANDOM_CATEGORIES = listOf(
             "/categoria/acao?ft=all" to "Ação",
             "/categoria/animacao?ft=all" to "Animação",
@@ -62,7 +60,7 @@ class SuperFlix : MainAPI() {
 
         private var cachedRandomTabs: List<Pair<String, String>>? = null
         private var cacheTime: Long = 0
-        private const val CACHE_DURATION = 300000L // 5 minutos
+        private const val CACHE_DURATION = 300000L
 
         fun getCombinedTabs(): List<Pair<String, String>> {
             val currentTime = System.currentTimeMillis()

@@ -356,53 +356,58 @@ class AniTube : MainAPI() {
             if (sortedEpisodes.isNotEmpty()) addEpisodes(if (isDubbed) DubStatus.Dubbed else DubStatus.Subbed, sortedEpisodes)
         }
     }
-
-    override suspend fun loadLinks(
-        data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit
-    ): Boolean {
-        val actualUrl = data.split("|poster=")[0]
-        val document = app.get(actualUrl).document
+override suspend fun loadLinks(
+    data: String,
+    isCasting: Boolean,
+    subtitleCallback: (SubtitleFile) -> Unit,
+    callback: (ExtractorLink) -> Unit
+): Boolean {
+    val actualUrl = data.split("|poster=")[0]
+    val document = app.get(actualUrl).document
+    
+    var linksFound = false
+    
+    document.selectFirst(PLAYER_FHD)?.let { iframe ->
+        val src = iframe.attr("src").takeIf { it.isNotBlank() } ?: return@let
+        val m3u8Url = extractM3u8FromUrl(src) ?: src
         
-        document.selectFirst(PLAYER_FHD)?.let { iframe ->
-            val src = iframe.attr("src").takeIf { it.isNotBlank() } ?: return@let
-            val m3u8Url = extractM3u8FromUrl(src) ?: src
-            
-            callback(newExtractorLink(name, "1080p", m3u8Url, ExtractorLinkType.M3U8) {
-                referer = "$mainUrl/"
-                quality = 1080
-            })
-            return true
-        }
+        callback(newExtractorLink(name, "Player FHD", m3u8Url, ExtractorLinkType.M3U8) {
+            referer = "$mainUrl/"
+            quality = 1080
+        })
+        linksFound = true
+    }
+    
+    document.selectFirst(PLAYER_BACKUP)?.let { iframe ->
+        val src = iframe.attr("src").takeIf { it.isNotBlank() } ?: return@let
+        val isM3u8 = src.contains("m3u8", true)
+        val linkType = if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
         
-        document.selectFirst(PLAYER_BACKUP)?.let { iframe ->
-            val src = iframe.attr("src").takeIf { it.isNotBlank() } ?: return@let
-            val isM3u8 = src.contains("m3u8", true)
+        callback(newExtractorLink(name, "Player Backup", src, linkType) {
+            referer = "$mainUrl/"
+            quality = 720
+        })
+        linksFound = true
+    }
+    
+    document.select("iframe").forEachIndexed { index, iframe ->
+        val src = iframe.attr("src")
+        if (src.contains("m3u8", true)) {
+            val alreadyAdded = document.selectFirst(PLAYER_FHD)?.attr("src") == src || 
+                              document.selectFirst(PLAYER_BACKUP)?.attr("src") == src
             
-            val linkType = if (isM3u8) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
-            
-            callback(newExtractorLink(name, "Backup", src, linkType) {
-                referer = "$mainUrl/"
-                quality = 720
-            })
-            return true
-        }
-        
-        document.select("iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            if (src.contains("m3u8", true)) {
+            if (!alreadyAdded) {
                 val m3u8Url = extractM3u8FromUrl(src) ?: src
                 
-                callback(newExtractorLink(name, "Auto", m3u8Url, ExtractorLinkType.M3U8) {
+                callback(newExtractorLink(name, "Player Auto", m3u8Url, ExtractorLinkType.M3U8) {
                     referer = "$mainUrl/"
                     quality = 720
                 })
-                return true
+                linksFound = true
             }
         }
-        
-        return false
     }
+    
+    return linksFound
 }
+    
